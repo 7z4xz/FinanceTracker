@@ -592,9 +592,9 @@ input, select, button, textarea {
 @media (max-width: 768px) {
     .top-action-bar {
         top: 15px;
-        right: 10px;
+        right: -5px;
         padding: 6px 10px;
-        gap: 8px;
+        gap: 4.5px;
     }
 
     .hero {
