@@ -3,15 +3,17 @@
 // ==========================================
 const API_URL = "https://script.google.com/macros/s/AKfycbyF4SASlVzCxMRZSDObqwnbZ9DjmzePEl4sJVNj0krBH_NqelFfeo2GjB9TPBNBG7i9/exec";
 
-// Variabel Global untuk Chart.js
+// Variabel Global
 let trendChartInstance = null;
 let categoryChartInstance = null;
+let allTransactions = []; // Menyimpan semua data dari Google Sheets
+let currentChartRange = 7; // Default grafik menampilkan 7 hari terakhir (1W)
 
 // ==========================================
 // UTAMA: DOM CONTENT LOADED (SATU PINTU)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Inisialisasi Aplikasi & Dark Mode
+    // 1. Inisialisasi Aplikasi, Waktu, & Dark Mode
     init();
     initTheme();
 
@@ -32,20 +34,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const transactionForm = document.getElementById("transaction-form");
     const submitBtn = document.getElementById("submit-btn");
 
-    // Fungsi Buka Modal (Menggunakan class 'active')
+    // Fungsi Buka Modal
     if (openModalBtn && modal) {
         openModalBtn.addEventListener("click", () => {
             modal.classList.remove("hidden");
-            setTimeout(() => modal.classList.add("active"), 10); // Trigger animasi
+            setTimeout(() => modal.classList.add("active"), 10);
         });
     }
 
     // Fungsi Tutup Modal & Reset Form
     const closeModal = () => {
         if (modal) {
-            modal.classList.remove("active"); // Hilangkan animasi dulu
+            modal.classList.remove("active");
             setTimeout(() => {
-                modal.classList.add("hidden"); // Sembunyikan setelah animasi selesai
+                modal.classList.add("hidden");
             }, 300);
         }
         if (transactionForm) {
@@ -54,14 +56,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
-    if (cancelModalBtn) closeModalBtn.addEventListener("click", closeModal);
-
-    // Tutup modal jika user klik area luar (overlay)
+    if (cancelModalBtn) cancelModalBtn.addEventListener("click", closeModal);
     if (modal) {
         modal.addEventListener("click", (e) => {
-            if (e.target === modal) {
-                closeModal();
-            }
+            if (e.target === modal) closeModal();
         });
     }
 
@@ -97,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     method: "POST",
                     body: JSON.stringify(formData)
                 });
-
                 const result = await response.json();
 
                 if (result.status === "success") {
@@ -134,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         method: "POST",
                         body: JSON.stringify({ action: "reset" })
                     });
-                    
                     const result = await response.json();
                     
                     if (result.status === "success") {
@@ -154,37 +150,44 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 6 & 8. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)
+    // 6. FITUR TOMBOL FILTER GRAFIK (1W, 1M, 3M, 1Y, All)
+    const filterBtns = document.querySelectorAll(".filter-btn");
+    if (filterBtns.length > 0) {
+        filterBtns.forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                // Hapus warna aktif dari semua tombol, lalu aktifkan yang diklik
+                filterBtns.forEach(b => b.classList.remove("active"));
+                e.target.classList.add("active");
+
+                // Ambil rentang waktu dari atribut data-range
+                const range = e.target.getAttribute("data-range");
+                currentChartRange = range === 'all' ? 'all' : parseInt(range);
+
+                // Render ulang grafik menggunakan data yang tersimpan
+                renderCharts(allTransactions, currentChartRange);
+            });
+        });
+    }
+
+    // 7. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)
     const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
     const sections = document.querySelectorAll("main section[id]");
 
-    // A. Fungsi saat menu sidebar diklik (Smooth Scroll)
     navItems.forEach(item => {
         item.addEventListener("click", (e) => {
             e.preventDefault();
-
             const targetId = item.getAttribute("data-target");
             const targetSection = document.getElementById(targetId);
 
             if (targetSection) {
-                targetSection.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start"
-                });
-
+                targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
                 navItems.forEach(nav => nav.classList.remove("active"));
                 item.classList.add("active");
             }
         });
     });
 
-    // B. Fungsi ScrollSpy (Warna biru pindah otomatis saat halaman di-scroll)
-    const observerOptions = {
-        root: null,
-        rootMargin: "-10% 0px -50% 0px",
-        threshold: 0
-    };
-
+    const observerOptions = { root: null, rootMargin: "-10% 0px -50% 0px", threshold: 0 };
     const observer = new IntersectionObserver((entries) => {
         if (window.scrollY < 100) {
             navItems.forEach(item => item.classList.remove("active"));
@@ -192,24 +195,42 @@ document.addEventListener("DOMContentLoaded", () => {
             if (dashboardNav) dashboardNav.classList.add("active");
             return;
         }
-
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const currentId = entry.target.getAttribute("id");
-                
                 navItems.forEach(item => {
                     item.classList.remove("active");
-                    if (item.getAttribute("data-target") === currentId) {
-                        item.classList.add("active");
-                    }
+                    if (item.getAttribute("data-target") === currentId) item.classList.add("active");
                 });
             }
         });
     }, observerOptions);
 
-    sections.forEach(section => {
-        observer.observe(section);
-    });
+    sections.forEach(section => observer.observe(section));
+
+    // 8. HAMBARGER MENU MOBILE TOGGLE
+    const hamburgerBtn = document.getElementById("hamburger-btn");
+    const sidebar = document.querySelector(".sidebar");
+
+    if (hamburgerBtn && sidebar) {
+        hamburgerBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle("mobile-open");
+        });
+        document.addEventListener("click", (e) => {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+                    sidebar.classList.remove("mobile-open");
+                }
+            }
+        });
+        const navLinks = sidebar.querySelectorAll(".nav-item");
+        navLinks.forEach(link => {
+            link.addEventListener("click", () => {
+                if (window.innerWidth <= 768) sidebar.classList.remove("mobile-open");
+            });
+        });
+    }
 });
 
 // ==========================================
@@ -218,6 +239,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function init() {
     console.log("FinanceTracker App Started");
+    updateGreeting(); // Update teks sapaan sesuai waktu
+}
+
+function updateGreeting() {
+    const greetingEl = document.getElementById("greeting");
+    if (!greetingEl) return;
+
+    const currentHour = new Date().getHours();
+    let greetingText = "Good Evening";
+
+    if (currentHour >= 3 && currentHour < 12) {
+        greetingText = "Good Morning";
+    } else if (currentHour >= 12 && currentHour < 18) {
+        greetingText = "Good Afternoon";
+    } else {
+        greetingText = "Good Evening";
+    }
+
+    greetingEl.innerText = greetingText;
 }
 
 // A. Mengambil Data dari Apps Script (GET)
@@ -229,9 +269,11 @@ async function loadTransactions() {
         const result = await response.json();
 
         if (result.status === "success" && Array.isArray(result.data)) {
-            updateSummaryCards(result.data);
-            renderTable(result.data);
-            renderCharts(result.data); // Render grafik analitik otomatis
+            allTransactions = result.data; // Simpan data secara global
+            
+            updateSummaryCards(allTransactions);
+            renderTable(allTransactions);
+            renderCharts(allTransactions, currentChartRange); // Render grafik dengan filter default
         }
     } catch (error) {
         console.error("Gagal mengambil data transaksi:", error);
@@ -240,18 +282,14 @@ async function loadTransactions() {
 
 // B. Menghitung Balance, Income, & Expense
 function updateSummaryCards(data) {
-    let income = 0;
-    let expense = 0;
+    let income = 0, expense = 0;
 
     data.forEach(item => {
         const jenis = (item.jenis || "").toLowerCase();
         const nominal = Number(item.nominal) || 0;
 
-        if (jenis === "income" || jenis === "pemasukan") {
-            income += nominal;
-        } else if (jenis === "expense" || jenis === "pengeluaran") {
-            expense += nominal;
-        }
+        if (jenis === "income" || jenis === "pemasukan") income += nominal;
+        else if (jenis === "expense" || jenis === "pengeluaran") expense += nominal;
     });
 
     const balance = income - expense;
@@ -272,7 +310,6 @@ function renderTable(data) {
     if (!tbody) return;
 
     tbody.innerHTML = "";
-
     const recentData = data.slice(-5).reverse();
 
     recentData.forEach(item => {
@@ -288,49 +325,120 @@ function renderTable(data) {
     });
 }
 
-// D. RENDER GRAFIK ANALYTICS (CHART.JS)
-function renderCharts(transactions) {
-    let totalIncome = 0;
-    let totalExpense = 0;
+// D. RENDER GRAFIK ANALYTICS (CHART.JS) - Tampilan Elegan & Dinamis
+function renderCharts(transactions, daysLimit = 7) {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const textColor = isDark ? '#94A3B8' : '#64748b';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const tooltipBg = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.9)';
+    const tooltipText = isDark ? '#0F172A' : '#ffffff';
+
+    // === LOGIKA FILTER WAKTU ===
+    let filteredTx = transactions;
+    if (daysLimit !== 'all') {
+        const now = new Date();
+        filteredTx = transactions.filter(tx => {
+            const txDate = new Date(tx.tanggal);
+            // Jika format gagal diparsing (Invalid Date), lewatkan filter agar tetap muncul
+            if (isNaN(txDate.getTime())) return true; 
+            
+            const diffTime = Math.abs(now - txDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= daysLimit;
+        });
+    }
+
+    // Olah data transaksi harian untuk Line Chart berdasarkan data yang difilter
+    const dateMap = {};
     const categoryMap = {};
 
-    transactions.forEach(tx => {
+    filteredTx.forEach(tx => {
+        const date = tx.tanggal || "Unk";
         const jenis = (tx.jenis || "").toLowerCase();
         const nominal = Number(tx.nominal) || 0;
+        
+        if (!dateMap[date]) dateMap[date] = { income: 0, expense: 0 };
 
         if (jenis === "income" || jenis === "pemasukan") {
-            totalIncome += nominal;
+            dateMap[date].income += nominal;
         } else if (jenis === "expense" || jenis === "pengeluaran") {
-            totalExpense += nominal;
+            dateMap[date].expense += nominal;
+            
+            // Kumpulkan kategori
             const kat = tx.kategori || "Lainnya";
             categoryMap[kat] = (categoryMap[kat] || 0) + nominal;
         }
     });
 
-    // 1. Grafik Trend (Income vs Expense)
+    const dates = Object.keys(dateMap);
+    const incomeData = dates.map(d => dateMap[d].income);
+    const expenseData = dates.map(d => dateMap[d].expense);
+
+    // 1. Grafik Trend (Line Chart Elegan)
     const ctxTrend = document.getElementById("trendChart");
     if (ctxTrend) {
         if (trendChartInstance) trendChartInstance.destroy();
-        
-        trendChartInstance = new Chart(ctxTrend, {
-            type: 'bar',
+        const trendCtx = ctxTrend.getContext('2d');
+
+        const incomeGradient = trendCtx.createLinearGradient(0, 0, 0, 300);
+        incomeGradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
+        incomeGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+        const expenseGradient = trendCtx.createLinearGradient(0, 0, 0, 300);
+        expenseGradient.addColorStop(0, 'rgba(220, 38, 38, 0.2)');
+        expenseGradient.addColorStop(1, 'rgba(220, 38, 38, 0)');
+
+        trendChartInstance = new Chart(trendCtx, {
+            type: 'line',
             data: {
-                labels: ['Income', 'Expense'],
-                datasets: [{
-                    label: 'Total (Rp)',
-                    data: [totalIncome, totalExpense],
-                    backgroundColor: ['#10b981', '#ef4444'],
-                    borderRadius: 6
-                }]
+                labels: dates.length > 0 ? dates : ['Belum ada data'],
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: incomeData.length > 0 ? incomeData : [0],
+                        borderColor: '#2563EB',
+                        backgroundColor: incomeGradient,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#2563EB'
+                    },
+                    {
+                        label: 'Expense',
+                        data: expenseData.length > 0 ? expenseData : [0],
+                        borderColor: '#DC2626',
+                        backgroundColor: expenseGradient,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#DC2626'
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } }
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { 
+                        position: 'top', 
+                        labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif" }, color: textColor } 
+                    },
+                    tooltip: { backgroundColor: tooltipBg, titleColor: tooltipText, bodyColor: tooltipText, padding: 12, cornerRadius: 10, displayColors: true }
+                },
+                scales: {
+                    x: { grid: { display: false }, border: { display: false }, ticks: { font: { family: "'Inter', sans-serif" }, color: textColor } },
+                    y: { grid: { color: gridColor, borderDash: [5, 5] }, border: { display: false }, ticks: { font: { family: "'Inter', sans-serif" }, color: textColor, padding: 10 } }
+                }
             }
         });
     }
 
-    // 2. Grafik Kategori Pengeluaran
+    // 2. Grafik Kategori Pengeluaran (Doughnut Elegan)
     const ctxCat = document.getElementById("categoryChart");
     if (ctxCat) {
         if (categoryChartInstance) categoryChartInstance.destroy();
@@ -344,27 +452,37 @@ function renderCharts(transactions) {
                 labels: catLabels.length > 0 ? catLabels : ['Belum ada data'],
                 datasets: [{
                     data: catData.length > 0 ? catData : [1],
-                    backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
+                    backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4'],
+                    borderWidth: 0,
+                    hoverOffset: 4
                 }]
             },
             options: {
-                responsive: true
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif" }, color: textColor } },
+                    tooltip: { backgroundColor: tooltipBg, titleColor: tooltipText, bodyColor: tooltipText, padding: 12, cornerRadius: 10 }
+                },
+                cutout: '75%'
             }
         });
     }
 }
 
-// E. Mengelola Dark / Light Mode
+// E. Mengelola Dark / Light Mode (dan Update Chart Secara Otomatis)
 function initTheme() {
     const themeToggleBtn = document.getElementById("theme-toggle");
     const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector("i") : null;
 
+    // Set tema awal saat dimuat
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
         document.documentElement.setAttribute("data-theme", "dark");
         if (themeIcon) themeIcon.classList.replace("fa-moon", "fa-sun");
     }
 
+    // Aksi Klik Tombol
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -380,64 +498,51 @@ function initTheme() {
                     themeIcon.classList.replace("fa-sun", "fa-moon");
                 }
             }
-        });
-    }
-}
 
-// ------------------------------------------
-    // 7. HAMBARGER MENU MOBILE TOGGLE
-    // ------------------------------------------
-    const hamburgerBtn = document.getElementById("hamburger-btn");
-    const sidebar = document.querySelector(".sidebar");
+            // === UPDATE WARNA GRAFIK AGAR MENGIKUTI TEMA ===
+            if (trendChartInstance || categoryChartInstance) {
+                const isDark = targetTheme === "dark";
+                const textColor = isDark ? '#94A3B8' : '#64748b';
+                const gridColor = isDark ? '#334155' : '#e2e8f0';
+                const tooltipBg = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.9)';
+                const tooltipText = isDark ? '#0F172A' : '#ffffff';
 
-    if (hamburgerBtn && sidebar) {
-        // Klik tombol hamburger untuk buka/tutup sidebar
-        hamburgerBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            sidebar.classList.toggle("mobile-open");
-        });
+                if (trendChartInstance) {
+                    trendChartInstance.options.scales.x.ticks.color = textColor;
+                    trendChartInstance.options.scales.y.ticks.color = textColor;
+                    trendChartInstance.options.scales.y.grid.color = gridColor;
+                    trendChartInstance.options.plugins.legend.labels.color = textColor;
+                    trendChartInstance.options.plugins.tooltip.backgroundColor = tooltipBg;
+                    trendChartInstance.options.plugins.tooltip.titleColor = tooltipText;
+                    trendChartInstance.options.plugins.tooltip.bodyColor = tooltipText;
+                    trendChartInstance.update();
+                }
 
-        // Tutup sidebar jika pengguna mengklik area luar sidebar di HP
-        document.addEventListener("click", (e) => {
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
-                    sidebar.classList.remove("mobile-open");
+                if (categoryChartInstance) {
+                    categoryChartInstance.options.plugins.legend.labels.color = textColor;
+                    categoryChartInstance.options.plugins.tooltip.backgroundColor = tooltipBg;
+                    categoryChartInstance.options.plugins.tooltip.titleColor = tooltipText;
+                    categoryChartInstance.options.plugins.tooltip.bodyColor = tooltipText;
+                    categoryChartInstance.update();
                 }
             }
         });
-
-        // Tutup sidebar otomatis saat salah satu menu diklik di HP
-        const navLinks = sidebar.querySelectorAll(".nav-item");
-        navLinks.forEach(link => {
-            link.addEventListener("click", () => {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove("mobile-open");
-                }
-            });
-        });
     }
-
-// Tambahkan fungsi ini di script.js Anda
-function updateGreeting() {
-    const greetingEl = document.getElementById("greeting");
-    if (!greetingEl) return;
-
-    const currentHour = new Date().getHours();
-    let greetingText = "Good Evening";
-
-    if (currentHour >= 3 && currentHour < 12) {
-        greetingText = "Good Morning";
-    } else if (currentHour >= 12 && currentHour < 18) {
-        greetingText = "Good Afternoon";
-    } else {
-        greetingText = "Good Evening";
-    }
-
-    greetingEl.innerText = greetingText;
 }
 
-// Pastikan dipanggil di dalam fungsi init() atau DOMContentLoaded
-function init() {
-    console.log("FinanceTracker App Started");
-    updateGreeting(); // <-- Panggil di sini
-}
+// ==========================================
+// EFEK TAP / CLICK RIPPLE (ELEGANT UI)
+// ==========================================
+document.addEventListener("pointerdown", (e) => {
+    const ripple = document.createElement("div");
+    ripple.className = "click-ripple-effect";
+    
+    ripple.style.left = `${e.clientX}px`;
+    ripple.style.top = `${e.clientY}px`;
+    
+    document.body.appendChild(ripple);
+
+    ripple.addEventListener("animationend", () => {
+        ripple.remove();
+    });
+});

@@ -22,6 +22,22 @@
     </head>
 
     <body>
+        <!-- ========================================== -->
+        <!-- BACKGROUND ANIMATION (GLOW & TRIANGLES)    -->
+        <!-- ========================================== -->
+        <div class="bg-animation">
+            <!-- Bola Gradien Latar Belakang -->
+            <div class="glow-shape g-1"></div>
+            <div class="glow-shape g-2"></div>
+            <div class="glow-shape g-3"></div>
+
+            <!-- Segitiga Melayang (Muncul-Hilang) -->
+            <div class="triangle-shape tr-1"></div>
+            <div class="triangle-shape tr-2"></div>
+            <div class="triangle-shape tr-3"></div>
+            <div class="triangle-shape tr-4"></div>
+        </div>
+
         <div class="app">
             
             <!-- Sidebar -->
@@ -145,12 +161,28 @@
                     <p style="color: var(--text-muted, #64748b); margin-bottom: 20px;">Visualisasi tren keuangan berdasarkan data transaksi Anda.</p>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                        
+                        <!-- CARD GRAFIK PERBANDINGAN (Dengan Tombol Filter) -->
                         <div class="card" style="padding: 20px;">
-                            <h3 style="font-size: 16px; margin-bottom: 15px;">Perbandingan Income vs Expense</h3>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                                <h3 style="font-size: 16px; margin: 0;">Income vs Expense</h3>
+                                
+                                <!-- Tombol Filter Rentang Waktu -->
+                                <div class="chart-filters">
+                                    <button class="filter-btn active" data-range="7">1W</button>
+                                    <button class="filter-btn" data-range="30">1M</button>
+                                    <button class="filter-btn" data-range="90">3M</button>
+                                    <button class="filter-btn" data-range="365">1Y</button>
+                                    <button class="filter-btn" data-range="all">All</button>
+                                </div>
+                            </div>
+                            
                             <div style="height: 220px; position: relative;">
                                 <canvas id="trendChart"></canvas>
                             </div>
                         </div>
+
+                        <!-- CARD GRAFIK KATEGORI -->
                         <div class="card" style="padding: 20px;">
                             <h3 style="font-size: 16px; margin-bottom: 15px;">Kategori Pengeluaran</h3>
                             <div style="height: 220px; position: relative;">

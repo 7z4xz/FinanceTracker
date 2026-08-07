@@ -2,7 +2,6 @@
    GOOGLE FONT
 ======================================== */
 
-
 /* ========================================
    ROOT VARIABLES
 ======================================== */
@@ -52,18 +51,125 @@ html{
     scroll-behavior: smooth;
 }
 
-
 /* ========================================
    BODY
 ======================================== */
 
 body{
     font-family: "Inter", sans-serif;
-    background: var(--background);
+    background: transparent;
     color: var(--text);
     min-height: 100vh;
 }
 
+/* ========================================
+   BACKGROUND AMBIENT GLOW ANIMATION
+======================================== */
+.bg-animation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--background);
+    transition: background 0.3s ease;
+}
+
+/* Bola Gradien Utama */
+.glow-shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px); /* Membuat efek pudar estetik */
+    animation: floatGlow infinite alternate ease-in-out;
+}
+
+/* --- LIGHT MODE COLORS & POSITIONS --- */
+.g-1 {
+    width: 450px; height: 450px;
+    background: rgba(16, 185, 129, 0.1);
+    top: -10%; left: 10%;
+    animation-duration: 14s;
+}
+.g-2 {
+    width: 450px; height: 450px;
+    background: rgba(16, 185, 129, 0.1); /* Hijau lembut */
+    bottom: -10%; right: 5%;
+    animation-duration: 18s;
+    animation-delay: 3s;
+}
+.g-3 {
+    width: 350px; height: 350px;
+    background: rgba(245, 158, 11, 0.08); /* Kuning lembut */
+    top: 40%; left: 50%;
+    animation-duration: 16s;
+    animation-delay: 6s;
+}
+
+/* Warna & Intensitas Dark Mode */
+[data-theme="dark"] .g-1 {
+    background: rgba(37, 99, 235, 0.25);
+}
+[data-theme="dark"] .g-2 {
+    background: rgba(16, 185, 129, 0.2);
+}
+[data-theme="dark"] .g-3 {
+    background: rgba(239, 68, 68, 0.18);
+}
+
+@keyframes floatGlow {
+    0% { transform: translateY(0px) translateX(0px) scale(1); }
+    50% { transform: translateY(-50px) translateX(40px) scale(1.1); }
+    100% { transform: translateY(40px) translateX(-50px) scale(0.9); }
+}
+
+
+/* --- 2. SEGITIGA MELAYANG (Fade Out & Reappear) --- */
+.triangle-shape {
+    position: absolute;
+    bottom: -100px;
+    background: rgba(37, 99, 235, 0.15); /* Light mode */
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    opacity: 0;
+    animation: floatAndFade infinite ease-in-out;
+}
+
+/* Warna Segitiga khusus Dark Mode */
+[data-theme="dark"] .triangle-shape {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+/* Variasi Posisi & Waktu Segitiga */
+.tr-1 { left: 15%; width: 55px; height: 55px; animation-duration: 13s; animation-delay: 0s; }
+.tr-2 { left: 35%; width: 75px; height: 75px; animation-duration: 17s; animation-delay: 3s; }
+.tr-3 { left: 65%; width: 45px; height: 45px; animation-duration: 15s; animation-delay: 1s; }
+.tr-4 { left: 85%; width: 90px; height: 90px; animation-duration: 21s; animation-delay: 5s; }
+
+/* Logika Animasi: Melayang, Berputar, Menghilang Sekejap, Lalu Muncul Lagi */
+@keyframes floatAndFade {
+    0% {
+        transform: translateY(0vh) rotate(0deg) scale(0.8);
+        opacity: 0;
+    }
+    20% {
+        opacity: 0.7; /* Muncul */
+    }
+    40% {
+        opacity: 0; /* Menghilang sekejap */
+    }
+    60% {
+        opacity: 0.7; /* Muncul kembali */
+    }
+    80% {
+        opacity: 0.3;
+    }
+    100% {
+        transform: translateY(-110vh) rotate(360deg) scale(1.2);
+        opacity: 0; /* Hilang di atas */
+    }
+}
 
 /* ========================================
    TYPOGRAPHY
@@ -92,7 +198,6 @@ img{
     max-width: 100%;
     display: block;
 }
-
 
 /* ========================================
    LAYOUT
@@ -151,7 +256,7 @@ img{
 .main-content{
     margin-left: 260px;
     flex: 1;
-    background: var(--background);
+    background: transparent;
     padding: 40px;
     min-height: 100vh;
     box-sizing: border-box;
@@ -348,6 +453,37 @@ tbody tr:hover{
     width: 100%;
 }
 
+/* Chart Filters (1W, 1M, 3M, 1Y) */
+.chart-filters {
+    display: flex;
+    gap: 4px;
+    background: var(--border-hover);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.filter-btn {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-light);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.filter-btn:hover {
+    color: var(--text);
+}
+
+.filter-btn.active {
+    background: var(--surface);
+    color: var(--primary);
+    box-shadow: 0 2px 5px var(--card-shadow);
+}
+
 /* Input khusus halaman settings agar mendukung Dark Mode */
 .settings-input {
     width: 100%;
@@ -361,7 +497,6 @@ tbody tr:hover{
     margin-top: 10px;
     outline: none;
 }
-
 
 /* ========================================
    MODAL & FAB (Tombol Melayang)
@@ -599,5 +734,39 @@ input, select, button, textarea {
 
     .hero {
         padding-right: 130px;
+    }
+}
+
+/* ========================================
+   ELEGANT CLICK / TAP RIPPLE EFFECT
+======================================== */
+.click-ripple-effect {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary); /* Garis cincin tipis yang elegan */
+    background: rgba(37, 99, 235, 0.08); /* Isian warna sangat transparan */
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.3);
+    animation: rippleSmooth 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    z-index: 9999;
+}
+
+/* Penyesuaian warna garis untuk Dark Mode */
+[data-theme="dark"] .click-ripple-effect {
+    border-color: #60A5FA;
+    background: rgba(96, 165, 250, 0.12);
+}
+
+/* Animasi Membesar Perlahan dan Memudar Halus */
+@keyframes rippleSmooth {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3);
+        opacity: 0.9;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
     }
 }
