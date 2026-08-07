@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>FinanceTracker</title>
+        
+        <!-- Google Font -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+        
+        <!-- Fonts Awesome -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+         
+        <!-- CSS --> 
+        <link rel="stylesheet" href="style.css">
+
+        <!-- Chart.js CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+
+    <body>
+        <div class="app">
+            
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Logo -->
+                <div class="logo">
+                    <h2>Ledger</h2>
+                    <p>Personal Finance</p>
+                </div>
+
+                <!-- Navigation -->
+                 <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" data-target="dashboard-section">
+                        <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="transactions-section">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                        <span>Transactions</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="analytics-section">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="budget-section">
+                        <i class="fa-solid fa-bullseye"></i>
+                        <span>Budget</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="settings-section">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>Settings</span>
+                    </a>
+                 </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                
+                <!-- Bar Tombol Aksi Melayang di Pojok Kanan Atas -->
+                <div class="top-action-bar">
+                    <button class="icon-btn" id="hamburger-btn" title="Menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <button class="icon-btn" id="reset-btn" title="Reset Semua Data" style="color: var(--danger);">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button class="icon-btn" id="theme-toggle" title="Ganti Tema">
+                        <i class="fa-regular fa-moon"></i>
+                    </button>
+                </div>
+
+                <!-- 1. DASHBOARD SECTION -->
+                <section id="dashboard-section" class="dashboard" style="padding-bottom: 20px;">
+                    <!-- Hero (Judul Good Afternoon yang ikut ter-scroll normal) -->
+                    <section class="hero">
+                        <h1 id="greeting">Good Afternoon</h1>
+                        <p id="hero-message">Selamat datang di Ledger</p>
+                    </section>
+
+                    <!-- Summary Cards -->
+                    <section class="summary-cards">
+                        <!-- Total Balance -->
+                         <div class="card">
+                            <div class="card-header">
+                                <span>Total Balance</span>
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <h2 id="total-balance">Rp0</h2>
+                            <p>Current Balance</p>
+                         </div>
+
+                         <!-- Income -->
+                          <div class="card">
+                            <div class="card-header">
+                                <span>Income</span>
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                            </div>
+                            <h2 id="total-income">Rp0</h2>
+                            <p>This Month</p>
+                          </div>
+
+                         <!-- Expense -->
+                          <div class="card">
+                            <div class="card-header">
+                                <span>Expense</span>
+                                <i class="fa-solid fa-arrow-trend-down"></i>
+                            </div>
+                            <h2 id="total-expense">Rp0</h2>
+                            <p>This Month</p>
+                          </div>
+                    </section>
+                </section>
+
+                <!-- 2. TRANSACTIONS SECTION -->
+                <section id="transactions-section" class="transactions">
+                    <div class="section-header">
+                        <h2>Recent Transactions</h2>
+                        <button class="view-all-btn">View All</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data akan diisi otomatis oleh JavaScript -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- 3. ANALYTICS SECTION -->
+                <section id="analytics-section" style="padding: 30px 0;">
+                    <div class="section-header" style="margin-bottom: 15px;">
+                        <h2>Analytics & Reports</h2>
+                    </div>
+                    <p style="color: var(--text-muted, #64748b); margin-bottom: 20px;">Visualisasi tren keuangan berdasarkan data transaksi Anda.</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                        <div class="card" style="padding: 20px;">
+                            <h3 style="font-size: 16px; margin-bottom: 15px;">Perbandingan Income vs Expense</h3>
+                            <div style="height: 220px; position: relative;">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 20px;">
+                            <h3 style="font-size: 16px; margin-bottom: 15px;">Kategori Pengeluaran</h3>
+                            <div style="height: 220px; position: relative;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 4. BUDGET SECTION -->
+                <section id="budget-section" style="padding: 30px 0;">
+                    <div class="section-header" style="margin-bottom: 15px;">
+                        <h2>Budget Planner</h2>
+                    </div>
+                    <p style="color: var(--text-muted, #64748b); margin-bottom: 20px;">Kelola batas maksimal pengeluaran kategori Anda tiap bulan.</p>
+                    
+                    <div class="card" style="padding: 20px;">
+                        <h3 style="font-size: 16px; margin-bottom: 15px;">Target Anggaran Kategori</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
+                                <span>Makanan & Minuman (Food)</span>
+                                <span style="font-weight: 600;">Limit: Rp1.500.000</span>
+                            </div>
+                            <div style="background: var(--border-color, #e2e8f0); border-radius: 10px; height: 10px; width: 100%;">
+                                <div style="background: #2563eb; width: 35%; height: 100%; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
+                                <span>Transportasi</span>
+                                <span style="font-weight: 600;">Limit: Rp500.000</span>
+                            </div>
+                            <div style="background: var(--border-color, #e2e8f0); border-radius: 10px; height: 10px; width: 100%;">
+                                <div style="background: #10b981; width: 20%; height: 100%; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 5. SETTINGS SECTION -->
+                <section id="settings-section" style="padding: 30px 0; margin-bottom: 40px;">
+                    <div class="section-header" style="margin-bottom: 15px;">
+                        <h2>Settings</h2>
+                    </div>
+                    <p style="color: var(--text-muted, #64748b); margin-bottom: 20px;">Pengaturan sistem koneksi dan preferensi aplikasi.</p>
+                    
+                    <div class="card" style="padding: 20px;">
+                        <h3 style="font-size: 16px; margin-bottom: 10px;">Google Apps Script API URL</h3>
+                        <p style="font-size: 13px; color: var(--text-muted, #64748b); margin-bottom: 10px;">URL yang menghubungkan website ini langsung ke Google Sheets Anda.</p>
+                        <input type="text" id="display-api-url" class="settings-input" readonly>
+                    </div>
+                </section>                
+            </main>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- AREA MODAL & TOMBOL TAMBAH TRANSAKSI       -->
+        <!-- ========================================== -->
+
+        <!-- Tombol Melayang -->
+        <button id="open-modal-btn" class="fab-btn">
+            <i class="fa-solid fa-plus"></i> + Tambah Transaksi
+        </button>
+
+        <!-- Pop-up Modal Form -->
+        <div id="transaction-modal" class="modal-overlay hidden">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h2>Tambah Transaksi</h2>
+                    <button id="close-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <form id="transaction-form">
+                    <div class="form-group">
+                        <label for="jenis">Jenis Transaksi</label>
+                        <select id="jenis" required>
+                            <option value="Income">Income (Pemasukan)</option>
+                            <option value="Expense">Expense (Pengeluaran)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="kategori">Kategori</label>
+                        <input type="text" id="kategori" placeholder="Contoh: Makanan, Gaji, Transport" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nominal">Nominal (Rp)</label>
+                        <input type="number" id="nominal" placeholder="50000" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deskripsi">Deskripsi</label>
+                        <input type="text" id="deskripsi" placeholder="Contoh: Makan Siang Nasi Padang" required>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-btn" class="btn-secondary">Batal</button>
+                        <button type="submit" id="submit-btn" class="btn-primary">Simpan Transaksi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>
