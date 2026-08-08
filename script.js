@@ -1,7 +1,7 @@
 // ==========================================
 // CONFIGURATION API
 // ==========================================
-const API_URL = "https://script.google.com/macros/s/AKfycbyASLjcGWxb3pAPh54oisnK1BgESpXww_mG1BNbPSEHVqgoocWRiBMbABkB33OJPcpR/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyz5rYEeXVJKExadajLkoalhZgtBFRuRq1YHIWyxWD2jcmLxkblpsPw6mWekP_FtJeZ/exec";
 
 // Variabel Global
 let trendChartInstance = null;
@@ -19,6 +19,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. Memuat Data Awal dari Google Sheets via API (Berdasarkan User Login)[cite: 7]
     loadTransactions();
+
+    // Cek foto profil awal untuk navbar saat halaman dimuat
+    (async function() {
+        const username = localStorage.getItem("ledger_user");
+        if (username) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "get_profile", username: username })
+                });
+                const result = await response.json();
+                if (result.status === "success" && result.photo) {
+                    updateNavbarAvatar(result.photo);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    })();
 
     // Tampilkan URL API di halaman Settings[cite: 7]
     const settingApiInput = document.getElementById("display-api-url");
@@ -81,13 +100,13 @@ document.addEventListener("DOMContentLoaded", () => {
             // Ambil username user yang sedang aktif dari memori browser[cite: 7]
             const currentUsername = localStorage.getItem("ledger_user");
 
-            // Bersihkan titik format ribuan pada nominal sebelum dikirim (Contoh: "50.000" jadi 50000)
+            // Bersihkan titik format ribuan pada nominal sebelum dikirim (Contoh: "50.000" jadi 50000)[cite: 7]
             const rawNominal = nominalInput.value.replace(/\./g, '');
 
             const formData = {
                 action: "add_transaction", // <-- WAJIB AGAR MASUK KE TAB TRANSACTIONS DENGAN BENAR[cite: 7]
                 username: currentUsername,  // <-- AGAR DATA TERKAIT DENGAN AKUN YANG LOGIN[cite: 7]
-                jenis: selectedType.value,  // Mengambil nilai dari Toggle Switch (Income / Expense)
+                jenis: selectedType.value,  // Mengambil nilai dari Toggle Switch (Income / Expense)[cite: 7]
                 kategori: kategoriInput ? kategoriInput.value : "-",
                 nominal: Number(rawNominal),
                 deskripsi: deskripsiInput.value
@@ -124,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4.1 Auto Format Titik Ribuan pada Input Nominal (Contoh: 50000 jadi 50.000)
+    // 4.1 Auto Format Titik Ribuan pada Input Nominal (Contoh: 50000 jadi 50.000)[cite: 7]
     const nominalInputField = document.getElementById("nominal");
     if (nominalInputField) {
         nominalInputField.addEventListener("input", function() {
@@ -137,41 +156,196 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 5. FITUR RESET SEMUA DATA[cite: 7]
-    const resetBtn = document.getElementById("reset-btn");
-    if (resetBtn) {
-        resetBtn.addEventListener("click", async () => {
-            const isConfirm = confirm("PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA data transaksi? Saldo akan kembali menjadi 0 dan data di Google Sheets akan dibersihkan.");
-            
-            if (isConfirm) {
-                resetBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-                resetBtn.disabled = true;
+    // 5. FITUR HAPUS TRANSAKSI TERPILIH (MULTI-SELECT DELETE)[cite: 7]
+    const deleteSelectedBtn = document.getElementById("delete-selected-btn");
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.addEventListener("click", async () => {
+            const selectedCheckboxes = document.querySelectorAll(".select-checkbox:checked");
+            if (selectedCheckboxes.length === 0) return;
 
-                try {
-                    const response = await fetch(API_URL, {
-                        method: "POST",
-                        body: JSON.stringify({ action: "reset" })
-                    });
-                    const result = await response.json();
-                    
-                    if (result.status === "success") {
-                        alert("Semua data berhasil dibersihkan!");
-                        loadTransactions(); 
-                    } else {
-                        alert("Gagal mereset: " + result.message);
-                    }
-                } catch (error) {
-                    alert("Terjadi kesalahan jaringan saat mencoba mereset.");
-                    console.error(error);
-                } finally {
-                    resetBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i>`;
-                    resetBtn.disabled = false;
+            const isConfirm = confirm(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} transaksi terpilih? Saldo akan dikalkulasi ulang.`);
+            if (!isConfirm) return;
+
+            const idsToDelete = Array.from(selectedCheckboxes).map(cb => cb.getAttribute("data-id"));
+
+            deleteSelectedBtn.innerText = "Menghapus...";
+            deleteSelectedBtn.disabled = true;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "delete_transactions", ids: idsToDelete })
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    alert("Transaksi terpilih berhasil dihapus dan saldo diperbarui!");
+                    loadTransactions(); // Otomatis me-refresh tabel, kartu balance, dan grafik kembali ke posisi semula[cite: 7]
+                } else {
+                    alert("Gagal menghapus transaksi.");
                 }
+            } catch (error) {
+                console.error(error);
+                alert("Terjadi kesalahan jaringan.");
+            } finally {
+                deleteSelectedBtn.innerText = "Hapus Terpilih";
+                deleteSelectedBtn.disabled = false;
             }
         });
     }
 
-    // 6. FITUR TOMBOL FILTER GRAFIK (1W, 1M, 3M, 1Y, All)[cite: 7]
+    // 6. FITUR SIDEBAR PROFIL KANAN (SLIDE-IN PANEL)
+    const profileBtn = document.getElementById("profile-btn");
+    const profilePanel = document.getElementById("profile-panel");
+    const profileOverlay = document.getElementById("profile-overlay");
+    const closeProfileBtn = document.getElementById("close-profile-btn");
+    const profileForm = document.getElementById("profile-form");
+    const avatarInput = document.getElementById("avatar-input");
+    const profileAvatarImg = document.getElementById("profile-avatar-img");
+
+    let base64Avatar = "";
+
+    if (profileBtn && profilePanel) {
+        profileBtn.addEventListener("click", () => {
+            profilePanel.classList.add("active");
+            profileOverlay.classList.add("active");
+            loadProfileData();
+        });
+    }
+
+    const closeProfilePanel = () => {
+        if (profilePanel) profilePanel.classList.remove("active");
+        if (profileOverlay) profileOverlay.classList.remove("active");
+    };
+
+    if (closeProfileBtn) closeProfileBtn.addEventListener("click", closeProfilePanel);
+    if (profileOverlay) profileOverlay.addEventListener("click", closeProfilePanel);
+
+    // Konversi & Kompresi Otomatis Gambar Profil agar Ringan & Aman untuk Google Sheets
+    if (avatarInput) {
+        avatarInput.addEventListener("change", function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 150;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Kompres ke format JPEG dengan kualitas 0.7 (sangat ringan)
+                        base64Avatar = canvas.toDataURL('image/jpeg', 0.7);
+                        profileAvatarImg.src = base64Avatar;
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Ambil Data Profil dari Server
+    async function loadProfileData() {
+        const username = localStorage.getItem("ledger_user");
+        if (!username) return;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "get_profile", username: username })
+            });
+            const result = await response.json();
+
+            if (result.status === "success") {
+                document.getElementById("profile-nama").value = result.nama || "";
+                document.getElementById("profile-username").value = result.username || "";
+                document.getElementById("profile-bio").value = result.bio || "";
+                if (result.photo) {
+                    base64Avatar = result.photo;
+                    profileAvatarImg.src = base64Avatar;
+                    updateNavbarAvatar(result.photo); // Update foto di navbar secara instan
+                } else {
+                    profileAvatarImg.src = "https://via.placeholder.com/100";
+                    updateNavbarAvatar("");
+                }
+            }
+        } catch (error) {
+            console.error("Gagal memuat profil:", error);
+        }
+    }
+
+    // Simpan Perubahan Profil (Termasuk Username & Transaksi Terkait)
+    if (profileForm) {
+        profileForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const oldUsername = localStorage.getItem("ledger_user");
+            const newNama = document.getElementById("profile-nama").value;
+            const newUsername = document.getElementById("profile-username").value;
+            const newBio = document.getElementById("profile-bio").value;
+
+            const saveProfileBtn = document.getElementById("save-profile-btn");
+            saveProfileBtn.innerText = "Menyimpan...";
+            saveProfileBtn.disabled = true;
+
+            const payload = {
+                action: "update_profile",
+                oldUsername: oldUsername,
+                newUsername: newUsername,
+                nama: newNama,
+                bio: newBio,
+                photo: base64Avatar
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    alert("Profil berhasil diperbarui!");
+                    localStorage.setItem("ledger_user", result.username);
+                    localStorage.setItem("ledger_name", result.nama);
+
+                    updateNavbarAvatar(base64Avatar); // Update navbar langsung
+                    updateGreeting();
+                    closeProfilePanel();
+                    loadTransactions();
+                } else {
+                    alert("Gagal memperbarui profil: " + (result.message || "Kesalahan server"));
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Gagal terhubung ke server.");
+            } finally {
+                saveProfileBtn.innerText = "Simpan Perubahan";
+                saveProfileBtn.disabled = false;
+            }
+        });
+    }
+
+    // 7. FITUR TOMBOL FILTER GRAFIK (1W, 1M, 3M, 1Y, All)[cite: 7]
     const filterBtns = document.querySelectorAll(".filter-btn");
     if (filterBtns.length > 0) {
         filterBtns.forEach(btn => {
@@ -187,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 7. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)[cite: 7]
+    // 8. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)[cite: 7]
     const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
     const sections = document.querySelectorAll("main section[id]");
 
@@ -226,7 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sections.forEach(section => observer.observe(section));
 
-    // 8. HAMBARGER MENU MOBILE TOGGLE[cite: 7]
+    // 9. HAMBARGER MENU MOBILE TOGGLE[cite: 7]
     const hamburgerBtn = document.getElementById("hamburger-btn");
     const sidebar = document.querySelector(".sidebar");
 
@@ -260,6 +434,23 @@ function init() {
     updateGreeting(); 
 }
 
+// Fungsi untuk mengganti ikon default navbar dengan foto profil bulat
+function updateNavbarAvatar(photoBase64) {
+    const navImg = document.getElementById("navbar-profile-img");
+    const navIcon = document.getElementById("navbar-default-icon");
+    
+    if (navImg && navIcon) {
+        if (photoBase64 && photoBase64.trim() !== "") {
+            navImg.src = photoBase64;
+            navImg.style.display = "block";
+            navIcon.style.display = "none";
+        } else {
+            navImg.style.display = "none";
+            navIcon.style.display = "inline-block";
+        }
+    }
+}
+
 function updateGreeting() {
     const greetingEl = document.getElementById("greeting");
     const greetingNameEl = document.getElementById("greeting-name");
@@ -279,7 +470,7 @@ function updateGreeting() {
 
     greetingEl.innerText = greetingText;
 
-    // Menampilkan Sapaan Personal dengan Nama User yang Sedang Login
+    // Menampilkan Sapaan Personal dengan Nama User yang Sedang Login[cite: 7]
     if (greetingNameEl) {
         const userName = localStorage.getItem("ledger_name");
         if (userName) {
@@ -338,25 +529,81 @@ function updateSummaryCards(data) {
     if (elExpense) elExpense.innerText = formatRp(expense);
 }
 
-// C. Menampilkan 5 Transaksi Terbaru di Tabel[cite: 7]
+// C. Menampilkan Tabel Interaktif dengan Checkbox & Klik Baris[cite: 7]
 function renderTable(data) {
     const tbody = document.querySelector("tbody");
-    if (!tbody) return;
+    const theadTr = document.querySelector("table thead tr");
+    if (!tbody || !theadTr) return;
+
+    // Tambahkan kolom checkbox pada header tabel[cite: 7]
+    theadTr.innerHTML = `
+        <th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" title="Pilih Semua"></th>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Category</th>
+        <th>Type</th>
+        <th>Amount</th>
+    `;
 
     tbody.innerHTML = "";
     const recentData = data.slice(-5).reverse();
 
+    if (recentData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-light);">Belum ada transaksi</td></tr>`;
+        updateSelectedCount();
+        return;
+    }
+
     recentData.forEach(item => {
         const tr = document.createElement("tr");
+        tr.style.cursor = "pointer";
         tr.innerHTML = `
+            <td><input type="checkbox" class="select-checkbox" data-id="${item.id}"></td>
             <td>${item.tanggal || "-"}</td>
             <td>${item.deskripsi || "-"}</td>
             <td>${item.kategori || "-"}</td>
             <td>${item.jenis || "-"}</td>
             <td>Rp${(Number(item.nominal) || 0).toLocaleString("id-ID")}</td>
         `;
+
+        // Interaksi Klik Baris: Memicu centang checkbox saat baris diketuk[cite: 7]
+        tr.addEventListener("click", (e) => {
+            if (e.target.tagName !== 'INPUT') {
+                const cb = tr.querySelector(".select-checkbox");
+                cb.checked = !cb.checked;
+                updateSelectedCount();
+            }
+        });
+
+        // Perbarui perhitungan saat checkbox diklik langsung[cite: 7]
+        const cbInput = tr.querySelector(".select-checkbox");
+        cbInput.addEventListener("change", updateSelectedCount);
+
         tbody.appendChild(tr);
     });
+
+    // Fitur "Pilih Semua" pada header[cite: 7]
+    const selectAllCb = document.getElementById("select-all-checkbox");
+    if (selectAllCb) {
+        selectAllCb.addEventListener("change", (e) => {
+            const checkboxes = document.querySelectorAll(".select-checkbox");
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            updateSelectedCount();
+        });
+    }
+}
+
+// Menghitung jumlah baris yang dicentang dan memunculkan tombol hapus[cite: 7]
+function updateSelectedCount() {
+    const checkedCheckboxes = document.querySelectorAll(".select-checkbox:checked");
+    const count = checkedCheckboxes.length;
+    const countSpan = document.getElementById("selected-count");
+    const deleteBtn = document.getElementById("delete-selected-btn");
+
+    if (countSpan) countSpan.innerText = count;
+    if (deleteBtn) {
+        deleteBtn.style.display = count > 0 ? "inline-block" : "none";
+    }
 }
 
 // D. RENDER GRAFIK ANALYTICS (CHART.JS) - Tampilan Elegan & Dinamis[cite: 7]
