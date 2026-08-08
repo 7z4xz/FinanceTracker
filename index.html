@@ -71,6 +71,14 @@
                         <span>Settings</span>
                     </a>
                  </nav>
+
+                 <!-- Sign Out -->
+                 <div class="sidebar-footer">
+                    <a href="login.html" class="logout-item">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Sign Out</span>
+                    </a>
+                 </div>
             </aside>
 
             <!-- Main Content -->
@@ -91,10 +99,10 @@
 
                 <!-- 1. DASHBOARD SECTION -->
                 <section id="dashboard-section" class="dashboard" style="padding-bottom: 20px;">
-                    <!-- Hero (Judul Good Afternoon yang ikut ter-scroll normal) -->
+                    <!-- Hero (Judul Good Afternoon & Sapaan Nama User) -->
                     <section class="hero">
                         <h1 id="greeting">Good Afternoon</h1>
-                        <p id="hero-message">Selamat datang di Ledger</p>
+                        <p id="greeting-name">Selamat datang di Ledger</p>
                     </section>
 
                     <!-- Summary Cards -->
@@ -257,27 +265,35 @@
                     <button id="close-modal-btn" class="close-btn">&times;</button>
                 </div>
                 <form id="transaction-form">
+                    
+                    <!-- Pilihan Jenis Transaksi (Toggle Switch Animasi Kiri-Kanan) -->
                     <div class="form-group">
-                        <label for="jenis">Jenis Transaksi</label>
-                        <select id="jenis" required>
-                            <option value="Income">Income (Pemasukan)</option>
-                            <option value="Expense">Expense (Pengeluaran)</option>
-                        </select>
+                        <label>Jenis Transaksi</label>
+                        <div class="type-toggle-container">
+                            <input type="radio" name="jenis" id="type-income" value="Income" checked hidden>
+                            <input type="radio" name="jenis" id="type-expense" value="Expense" hidden>
+                            
+                            <div class="toggle-slider"></div>
+                            
+                            <label for="type-income" class="toggle-label">Income</label>
+                            <label for="type-expense" class="toggle-label">Expense</label>
+                        </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="kategori">Kategori</label>
-                        <input type="text" id="kategori" placeholder="Contoh: Makanan, Gaji, Transport" required>
+                        <input type="text" id="kategori" placeholder="Contoh: Makanan, Gaji, Transport" required autocomplete="off">
                     </div>
                     
+                    <!-- Nominal dengan Format Otomatis Titik (Contoh: 50.000) -->
                     <div class="form-group">
                         <label for="nominal">Nominal (Rp)</label>
-                        <input type="number" id="nominal" placeholder="50000" min="1" required>
+                        <input type="text" id="nominal" placeholder="0" required autocomplete="off">
                     </div>
                     
                     <div class="form-group">
                         <label for="deskripsi">Deskripsi</label>
-                        <input type="text" id="deskripsi" placeholder="Contoh: Makan Siang Nasi Padang" required>
+                        <input type="text" id="deskripsi" placeholder="Contoh: Makan Siang Nasi Padang" required autocomplete="off">
                     </div>
                     
                     <div class="modal-actions">

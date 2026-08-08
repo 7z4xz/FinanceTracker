@@ -645,6 +645,62 @@ input, select, button, textarea {
     background: var(--border-hover);
 }
 
+/* ========================================
+   CUSTOM TOGGLE SWITCH (INCOME VS EXPENSE)
+======================================== */
+.type-toggle-container {
+    display: flex;
+    position: relative;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    height: 48px;
+    box-sizing: border-box;
+    margin-top: 4px;
+}
+
+/* Slider yang bergeser dinamis */
+.toggle-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: calc(50% - 4px);
+    border-radius: 8px;
+    transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.4s ease;
+    z-index: 1;
+}
+
+.toggle-label {
+    flex: 1;
+    text-align: center;
+    line-height: 38px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.3s ease;
+}
+
+/* Jika Income dipilih: Geser ke kiri, warna Hijau */
+#type-income:checked ~ .toggle-slider {
+    left: 4px;
+    background-color: var(--success);
+}
+#type-income:checked ~ label[for="type-income"] {
+    color: white;
+}
+
+/* Jika Expense dipilih: Geser ke kanan, warna Merah */
+#type-expense:checked ~ .toggle-slider {
+    left: 50%;
+    background-color: var(--danger);
+}
+#type-expense:checked ~ label[for="type-expense"] {
+    color: white;
+}
+
 /* ==================================================== */
 /* RESPONSIVE DESIGN                                    */
 /* ==================================================== */
@@ -769,4 +825,153 @@ input, select, button, textarea {
         transform: translate(-50%, -50%) scale(2);
         opacity: 0;
     }
+}
+
+/* ========================================
+   SPLASH SCREEN & AUTH LOGIC (GLASSMORPHISM)
+======================================== */
+.screen-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 500;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.hidden-scene {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Animasi Teks "Welcome" */
+.welcome-text {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text);
+    opacity: 0; /* Default disembunyikan dulu */
+}
+
+/* Class baru untuk men-trigger animasi dari JavaScript */
+.animate-welcome {
+    animation: welcomeCinematic 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes welcomeCinematic {
+    0% { opacity: 0; transform: scale(0.85); filter: blur(4px); }
+    30% { opacity: 1; transform: scale(1); filter: blur(0px); }
+    70% { opacity: 1; transform: scale(1.05); filter: blur(0px); }
+    100% { opacity: 0; transform: scale(1.15); filter: blur(4px); }
+}
+
+/* --- GLASSMORPHISM PANEL --- */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.15); /* Transparan */
+    backdrop-filter: blur(16px); /* Efek Kaca Blur */
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Border kilauan kaca */
+    border-radius: 24px; /* Sudut melengkung elegan */
+    padding: 40px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: slideUpFade 0.8s ease forwards;
+    animation-delay: 0.2s; /* Muncul setelah welcome selesai */
+}
+
+/* Penyesuaian Kaca untuk Dark Mode */
+[data-theme="dark"] .glass-panel {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes slideUpFade {
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Styling Isi Form Login */
+.auth-header { text-align: center; margin-bottom: 30px; }
+.auth-header h2 { font-size: 28px; margin-bottom: 5px; }
+.auth-header p { font-size: 14px; color: var(--text-light); }
+
+.input-group {
+    position: relative;
+    margin-bottom: 16px;
+}
+.input-group i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    font-size: 14px;
+}
+.input-group input {
+    width: 100%;
+    padding: 14px 14px 14px 45px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+.input-group input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+.auth-btn:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+.auth-footer { text-align: center; margin-top: 20px; font-size: 13px; }
+.auth-footer a { color: var(--primary); font-weight: 600; }
+
+/* ========================================
+   LOGOUT BUTTON (SIDEBAR FOOTER)
+======================================== */
+.sidebar-footer {
+    margin-top: auto; /* Kunci rahasia untuk mendorong elemen ke paling bawah */
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08); /* Garis pemisah tipis */
+    margin-bottom: 10px;
+}
+
+.logout-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    color: #f87171; /* Warna merah lembut */
+    font-weight: 500;
+    transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
+}
+
+.logout-item:hover {
+    background: rgba(239, 68, 68, 0.15); /* Efek sorot merah transparan */
+    color: #fca5a5;
+    transform: translateX(6px); /* Efek geser ala Vibe Coding Anda */
 }

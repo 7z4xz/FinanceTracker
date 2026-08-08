@@ -1,32 +1,32 @@
 // ==========================================
 // CONFIGURATION API
 // ==========================================
-const API_URL = "https://script.google.com/macros/s/AKfycbyF4SASlVzCxMRZSDObqwnbZ9DjmzePEl4sJVNj0krBH_NqelFfeo2GjB9TPBNBG7i9/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyASLjcGWxb3pAPh54oisnK1BgESpXww_mG1BNbPSEHVqgoocWRiBMbABkB33OJPcpR/exec";
 
 // Variabel Global
 let trendChartInstance = null;
 let categoryChartInstance = null;
-let allTransactions = []; // Menyimpan semua data dari Google Sheets
-let currentChartRange = 7; // Default grafik menampilkan 7 hari terakhir (1W)
+let allTransactions = []; // Menyimpan semua data dari Google Sheets[cite: 7]
+let currentChartRange = 7; // Default grafik menampilkan 7 hari terakhir (1W)[cite: 7]
 
 // ==========================================
 // UTAMA: DOM CONTENT LOADED (SATU PINTU)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Inisialisasi Aplikasi, Waktu, & Dark Mode
+    // 1. Inisialisasi Aplikasi, Waktu, & Dark Mode[cite: 7]
     init();
     initTheme();
 
-    // 2. Memuat Data Awal dari Google Sheets via API
+    // 2. Memuat Data Awal dari Google Sheets via API (Berdasarkan User Login)[cite: 7]
     loadTransactions();
 
-    // Tampilkan URL API di halaman Settings
+    // Tampilkan URL API di halaman Settings[cite: 7]
     const settingApiInput = document.getElementById("display-api-url");
     if (settingApiInput) {
         settingApiInput.value = API_URL;
     }
 
-    // 3. Deklarasi Elemen Modal & Form
+    // 3. Deklarasi Elemen Modal & Form[cite: 7]
     const modal = document.getElementById("transaction-modal");
     const openModalBtn = document.getElementById("open-modal-btn");
     const closeModalBtn = document.getElementById("close-modal-btn");
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const transactionForm = document.getElementById("transaction-form");
     const submitBtn = document.getElementById("submit-btn");
 
-    // Fungsi Buka Modal
+    // Fungsi Buka Modal[cite: 7]
     if (openModalBtn && modal) {
         openModalBtn.addEventListener("click", () => {
             modal.classList.remove("hidden");
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Fungsi Tutup Modal & Reset Form
+    // Fungsi Tutup Modal & Reset Form[cite: 7]
     const closeModal = () => {
         if (modal) {
             modal.classList.remove("active");
@@ -63,25 +63,33 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4. Penanganan Submit Form Transaksi
+    // 4. Penanganan Submit Form Transaksi (Dengan Toggle Income/Expense & Auto Format Nominal)[cite: 7]
     if (transactionForm) {
         transactionForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            const jenisInput = document.getElementById("jenis");
             const kategoriInput = document.getElementById("kategori");
             const nominalInput = document.getElementById("nominal");
             const deskripsiInput = document.getElementById("deskripsi");
+            const selectedType = document.querySelector('input[name="jenis"]:checked');
 
-            if (!jenisInput || !nominalInput || !deskripsiInput) {
+            if (!nominalInput || !deskripsiInput || !selectedType) {
                 alert("Elemen form tidak lengkap di HTML!");
                 return;
             }
 
+            // Ambil username user yang sedang aktif dari memori browser[cite: 7]
+            const currentUsername = localStorage.getItem("ledger_user");
+
+            // Bersihkan titik format ribuan pada nominal sebelum dikirim (Contoh: "50.000" jadi 50000)
+            const rawNominal = nominalInput.value.replace(/\./g, '');
+
             const formData = {
-                jenis: jenisInput.value,
+                action: "add_transaction", // <-- WAJIB AGAR MASUK KE TAB TRANSACTIONS DENGAN BENAR[cite: 7]
+                username: currentUsername,  // <-- AGAR DATA TERKAIT DENGAN AKUN YANG LOGIN[cite: 7]
+                jenis: selectedType.value,  // Mengambil nilai dari Toggle Switch (Income / Expense)
                 kategori: kategoriInput ? kategoriInput.value : "-",
-                nominal: Number(nominalInput.value),
+                nominal: Number(rawNominal),
                 deskripsi: deskripsiInput.value
             };
 
@@ -116,7 +124,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 5. FITUR RESET SEMUA DATA
+    // 4.1 Auto Format Titik Ribuan pada Input Nominal (Contoh: 50000 jadi 50.000)
+    const nominalInputField = document.getElementById("nominal");
+    if (nominalInputField) {
+        nominalInputField.addEventListener("input", function() {
+            let value = this.value.replace(/[^0-9]/g, '');
+            if (value) {
+                this.value = parseInt(value, 10).toLocaleString('id-ID');
+            } else {
+                this.value = '';
+            }
+        });
+    }
+
+    // 5. FITUR RESET SEMUA DATA[cite: 7]
     const resetBtn = document.getElementById("reset-btn");
     if (resetBtn) {
         resetBtn.addEventListener("click", async () => {
@@ -150,26 +171,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 6. FITUR TOMBOL FILTER GRAFIK (1W, 1M, 3M, 1Y, All)
+    // 6. FITUR TOMBOL FILTER GRAFIK (1W, 1M, 3M, 1Y, All)[cite: 7]
     const filterBtns = document.querySelectorAll(".filter-btn");
     if (filterBtns.length > 0) {
         filterBtns.forEach(btn => {
             btn.addEventListener("click", (e) => {
-                // Hapus warna aktif dari semua tombol, lalu aktifkan yang diklik
                 filterBtns.forEach(b => b.classList.remove("active"));
                 e.target.classList.add("active");
 
-                // Ambil rentang waktu dari atribut data-range
                 const range = e.target.getAttribute("data-range");
                 currentChartRange = range === 'all' ? 'all' : parseInt(range);
 
-                // Render ulang grafik menggunakan data yang tersimpan
                 renderCharts(allTransactions, currentChartRange);
             });
         });
     }
 
-    // 7. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)
+    // 7. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)[cite: 7]
     const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
     const sections = document.querySelectorAll("main section[id]");
 
@@ -208,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sections.forEach(section => observer.observe(section));
 
-    // 8. HAMBARGER MENU MOBILE TOGGLE
+    // 8. HAMBARGER MENU MOBILE TOGGLE[cite: 7]
     const hamburgerBtn = document.getElementById("hamburger-btn");
     const sidebar = document.querySelector(".sidebar");
 
@@ -239,11 +257,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function init() {
     console.log("FinanceTracker App Started");
-    updateGreeting(); // Update teks sapaan sesuai waktu
+    updateGreeting(); 
 }
 
 function updateGreeting() {
     const greetingEl = document.getElementById("greeting");
+    const greetingNameEl = document.getElementById("greeting-name");
+    
     if (!greetingEl) return;
 
     const currentHour = new Date().getHours();
@@ -258,29 +278,43 @@ function updateGreeting() {
     }
 
     greetingEl.innerText = greetingText;
+
+    // Menampilkan Sapaan Personal dengan Nama User yang Sedang Login
+    if (greetingNameEl) {
+        const userName = localStorage.getItem("ledger_name");
+        if (userName) {
+            greetingNameEl.innerText = `Selamat datang, ${userName}`;
+        } else {
+            greetingNameEl.innerText = "Selamat datang di Ledger";
+        }
+    }
 }
 
-// A. Mengambil Data dari Apps Script (GET)
+// A. Mengambil Data dari Apps Script Berdasarkan Username Aktif (GET)[cite: 7]
 async function loadTransactions() {
     if (!API_URL) return;
 
+    // Ambil username user yang sedang aktif dari memori browser[cite: 7]
+    const currentUsername = localStorage.getItem("ledger_user");
+
     try {
-        const response = await fetch(API_URL);
+        // Kirim parameter username ke Apps Script agar hanya mengambil data milik user tersebut[cite: 7]
+        const response = await fetch(`${API_URL}?username=${currentUsername}`);
         const result = await response.json();
 
         if (result.status === "success" && Array.isArray(result.data)) {
-            allTransactions = result.data; // Simpan data secara global
+            allTransactions = result.data; 
             
             updateSummaryCards(allTransactions);
             renderTable(allTransactions);
-            renderCharts(allTransactions, currentChartRange); // Render grafik dengan filter default
+            renderCharts(allTransactions, currentChartRange); 
         }
     } catch (error) {
         console.error("Gagal mengambil data transaksi:", error);
     }
 }
 
-// B. Menghitung Balance, Income, & Expense
+// B. Menghitung Balance, Income, & Expense[cite: 7]
 function updateSummaryCards(data) {
     let income = 0, expense = 0;
 
@@ -304,7 +338,7 @@ function updateSummaryCards(data) {
     if (elExpense) elExpense.innerText = formatRp(expense);
 }
 
-// C. Menampilkan 5 Transaksi Terbaru di Tabel
+// C. Menampilkan 5 Transaksi Terbaru di Tabel[cite: 7]
 function renderTable(data) {
     const tbody = document.querySelector("tbody");
     if (!tbody) return;
@@ -325,7 +359,7 @@ function renderTable(data) {
     });
 }
 
-// D. RENDER GRAFIK ANALYTICS (CHART.JS) - Tampilan Elegan & Dinamis
+// D. RENDER GRAFIK ANALYTICS (CHART.JS) - Tampilan Elegan & Dinamis[cite: 7]
 function renderCharts(transactions, daysLimit = 7) {
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
     const textColor = isDark ? '#94A3B8' : '#64748b';
@@ -339,7 +373,6 @@ function renderCharts(transactions, daysLimit = 7) {
         const now = new Date();
         filteredTx = transactions.filter(tx => {
             const txDate = new Date(tx.tanggal);
-            // Jika format gagal diparsing (Invalid Date), lewatkan filter agar tetap muncul
             if (isNaN(txDate.getTime())) return true; 
             
             const diffTime = Math.abs(now - txDate);
@@ -348,7 +381,6 @@ function renderCharts(transactions, daysLimit = 7) {
         });
     }
 
-    // Olah data transaksi harian untuk Line Chart berdasarkan data yang difilter
     const dateMap = {};
     const categoryMap = {};
 
@@ -364,7 +396,6 @@ function renderCharts(transactions, daysLimit = 7) {
         } else if (jenis === "expense" || jenis === "pengeluaran") {
             dateMap[date].expense += nominal;
             
-            // Kumpulkan kategori
             const kat = tx.kategori || "Lainnya";
             categoryMap[kat] = (categoryMap[kat] || 0) + nominal;
         }
@@ -374,7 +405,7 @@ function renderCharts(transactions, daysLimit = 7) {
     const incomeData = dates.map(d => dateMap[d].income);
     const expenseData = dates.map(d => dateMap[d].expense);
 
-    // 1. Grafik Trend (Line Chart Elegan)
+    // 1. Grafik Trend (Line Chart Elegan)[cite: 7]
     const ctxTrend = document.getElementById("trendChart");
     if (ctxTrend) {
         if (trendChartInstance) trendChartInstance.destroy();
@@ -438,7 +469,7 @@ function renderCharts(transactions, daysLimit = 7) {
         });
     }
 
-    // 2. Grafik Kategori Pengeluaran (Doughnut Elegan)
+    // 2. Grafik Kategori Pengeluaran (Doughnut Elegan)[cite: 7]
     const ctxCat = document.getElementById("categoryChart");
     if (ctxCat) {
         if (categoryChartInstance) categoryChartInstance.destroy();
@@ -470,19 +501,17 @@ function renderCharts(transactions, daysLimit = 7) {
     }
 }
 
-// E. Mengelola Dark / Light Mode (dan Update Chart Secara Otomatis)
+// E. Mengelola Dark / Light Mode (dan Update Chart Secara Otomatis)[cite: 7]
 function initTheme() {
     const themeToggleBtn = document.getElementById("theme-toggle");
     const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector("i") : null;
 
-    // Set tema awal saat dimuat
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
         document.documentElement.setAttribute("data-theme", "dark");
         if (themeIcon) themeIcon.classList.replace("fa-moon", "fa-sun");
     }
 
-    // Aksi Klik Tombol
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -499,7 +528,6 @@ function initTheme() {
                 }
             }
 
-            // === UPDATE WARNA GRAFIK AGAR MENGIKUTI TEMA ===
             if (trendChartInstance || categoryChartInstance) {
                 const isDark = targetTheme === "dark";
                 const textColor = isDark ? '#94A3B8' : '#64748b';
