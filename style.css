@@ -975,3 +975,60 @@ input, select, button, textarea {
     color: #fca5a5;
     transform: translateX(6px); /* Efek geser ala Vibe Coding Anda */
 }
+
+/* ========================================
+   MEDIA QUERY KHUSUS MOBILE UNTUK LOGIN & WELCOME
+======================================== */
+@media (max-width: 768px) {
+    /* Menyesuaikan ukuran kotak glassmorphism agar tidak terlalu lebar di HP */
+    .glass-panel {
+        padding: 25px 20px;
+        width: 88%;
+        max-width: 340px;
+        border-radius: 20px;
+    }
+
+    /* Mengecilkan ukuran teks sapaan "Welcome, [Nama]" agar pas di layar HP */
+    .welcome-text {
+        font-size: 28px !important;
+        text-align: center;
+        padding: 0 20px;
+        letter-spacing: 1px;
+    }
+
+    /* Merapikan ukuran font header di dalam form login */
+    .auth-header h2 {
+        font-size: 24px;
+    }
+    
+    .auth-header p {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 768px) {
+    .app {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 260px;
+        height: 100vh;
+        position: fixed;
+        left: -100%;
+        top: 0;
+        transition: left 0.3s ease-in-out;
+        z-index: 1000;
+        box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3);
+        
+        /* === TAMBAHKAN INI AGAR TIDAK TERTUTUP DI HP === */
+        padding-bottom: 50px; 
+        overflow-y: auto; /* Bisa di-scroll jika layar HP terlalu pendek */
+    }
+
+    .sidebar-footer {
+        margin-bottom: 30px; /* Memberikan jarak ekstra dari batas bawah layar HP */
+    }
+    
+    /* ... (sisa kode media query lainnya biarkan tetap ada) ... */
+}
