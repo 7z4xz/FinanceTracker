@@ -1,7 +1,7 @@
 // ==========================================
 // CONFIGURATION API
 // ==========================================
-const API_URL = "https://script.google.com/macros/s/AKfycbyz5rYEeXVJKExadajLkoalhZgtBFRuRq1YHIWyxWD2jcmLxkblpsPw6mWekP_FtJeZ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxvmAIO6mR_3QHnkXBcZUVNOT-eCSNfVIhVsTYFzom7avdyGbhhDAStDy-eWFNGlerK/exec";
 
 // Variabel Global
 let trendChartInstance = null;
