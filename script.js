@@ -6,7 +6,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyz5rYEeXVJKExadajLkoal
 // Variabel Global
 let trendChartInstance = null;
 let categoryChartInstance = null;
-let allTransactions = []; // Menyimpan semua data dari Google Sheets[cite: 7]
+let allTransactions = []; // Menyimpan semua data dari Google Sheets
 let currentChartRange = 7; // Default grafik menampilkan 7 hari terakhir (1W)[cite: 7]
 
 // ==========================================
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4. Penanganan Submit Form Transaksi (Dengan Toggle Income/Expense & Auto Format Nominal)[cite: 7]
+    // 4. Penanganan Submit Form Transaksi (Menggunakan Custom Toast)[cite: 7]
     if (transactionForm) {
         transactionForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const selectedType = document.querySelector('input[name="jenis"]:checked');
 
             if (!nominalInput || !deskripsiInput || !selectedType) {
-                alert("Elemen form tidak lengkap di HTML!");
+                showToast("Elemen form tidak lengkap di HTML!", "error");
                 return;
             }
 
@@ -125,15 +125,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    alert("Transaksi berhasil disimpan!");
+                    showToast("Transaksi berhasil disimpan!", "success");
                     closeModal();
                     loadTransactions();
                 } else {
-                    alert("Gagal menyimpan: " + (result.message || "Terjadi kesalahan server."));
+                    showToast("Gagal menyimpan: " + (result.message || "Terjadi kesalahan server."), "error");
                 }
             } catch (error) {
                 console.error("Error kirim data:", error);
-                alert("Gagal terhubung ke server. Periksa koneksi internet Anda.");
+                showToast("Gagal terhubung ke server. Periksa koneksi internet Anda.", "error");
             } finally {
                 if (submitBtn) {
                     submitBtn.innerText = "Simpan Transaksi";
@@ -156,14 +156,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 5. FITUR HAPUS TRANSAKSI TERPILIH (MULTI-SELECT DELETE)[cite: 7]
+    // 5. FITUR HAPUS TRANSAKSI TERPILIH (MULTI-SELECT DELETE MENGGUNAKAN CUSTOM CONFIRM)[cite: 7]
     const deleteSelectedBtn = document.getElementById("delete-selected-btn");
     if (deleteSelectedBtn) {
         deleteSelectedBtn.addEventListener("click", async () => {
             const selectedCheckboxes = document.querySelectorAll(".select-checkbox:checked");
             if (selectedCheckboxes.length === 0) return;
 
-            const isConfirm = confirm(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} transaksi terpilih? Saldo akan dikalkulasi ulang.`);
+            const isConfirm = await showConfirmDialog(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} transaksi terpilih? Saldo akan dikalkulasi ulang.`);
             if (!isConfirm) return;
 
             const idsToDelete = Array.from(selectedCheckboxes).map(cb => cb.getAttribute("data-id"));
@@ -179,14 +179,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    alert("Transaksi terpilih berhasil dihapus dan saldo diperbarui!");
+                    showToast("Transaksi terpilih berhasil dihapus dan saldo diperbarui!", "success");
                     loadTransactions(); // Otomatis me-refresh tabel, kartu balance, dan grafik kembali ke posisi semula[cite: 7]
                 } else {
-                    alert("Gagal menghapus transaksi.");
+                    showToast("Gagal menghapus transaksi.", "error");
                 }
             } catch (error) {
                 console.error(error);
-                alert("Terjadi kesalahan jaringan.");
+                showToast("Terjadi kesalahan jaringan.", "error");
             } finally {
                 deleteSelectedBtn.innerText = "Hapus Terpilih";
                 deleteSelectedBtn.disabled = false;
@@ -293,7 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Simpan Perubahan Profil (Termasuk Username & Transaksi Terkait)
+    // Simpan Perubahan Profil (Menggunakan Toast Notification)
     if (profileForm) {
         profileForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    alert("Profil berhasil diperbarui!");
+                    showToast("Profil berhasil diperbarui!", "success");
                     localStorage.setItem("ledger_user", result.username);
                     localStorage.setItem("ledger_name", result.nama);
 
@@ -333,11 +333,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     closeProfilePanel();
                     loadTransactions();
                 } else {
-                    alert("Gagal memperbarui profil: " + (result.message || "Kesalahan server"));
+                    showToast("Gagal memperbarui profil: " + (result.message || "Kesalahan server"), "error");
                 }
             } catch (error) {
                 console.error(error);
-                alert("Gagal terhubung ke server.");
+                showToast("Gagal terhubung ke server.", "error");
             } finally {
                 saveProfileBtn.innerText = "Simpan Perubahan";
                 saveProfileBtn.disabled = false;
@@ -748,32 +748,28 @@ function renderCharts(transactions, daysLimit = 7) {
     }
 }
 
-// E. Mengelola Dark / Light Mode (dan Update Chart Secara Otomatis)[cite: 7]
+// E. Mengelola Dark / Light Mode via Settings (dan Update Chart Secara Otomatis)[cite: 7]
 function initTheme() {
-    const themeToggleBtn = document.getElementById("theme-toggle");
-    const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector("i") : null;
+    const lightRadio = document.getElementById("mode-light");
+    const darkRadio = document.getElementById("mode-dark");
+    const themeRadios = document.querySelectorAll('input[name="theme_mode"]');
 
-    const savedTheme = localStorage.getItem("theme");
+    const savedTheme = localStorage.getItem("theme") || "light";
+    
     if (savedTheme === "dark") {
         document.documentElement.setAttribute("data-theme", "dark");
-        if (themeIcon) themeIcon.classList.replace("fa-moon", "fa-sun");
+        if (darkRadio) darkRadio.checked = true;
+    } else {
+        document.documentElement.setAttribute("data-theme", "light");
+        if (lightRadio) lightRadio.checked = true;
     }
 
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener("click", () => {
-            const currentTheme = document.documentElement.getAttribute("data-theme");
-            const targetTheme = currentTheme === "dark" ? "light" : "dark";
-
+    themeRadios.forEach(radio => {
+        radio.addEventListener("change", (e) => {
+            const targetTheme = e.target.value;
+            
             document.documentElement.setAttribute("data-theme", targetTheme);
             localStorage.setItem("theme", targetTheme);
-
-            if (themeIcon) {
-                if (targetTheme === "dark") {
-                    themeIcon.classList.replace("fa-moon", "fa-sun");
-                } else {
-                    themeIcon.classList.replace("fa-sun", "fa-moon");
-                }
-            }
 
             if (trendChartInstance || categoryChartInstance) {
                 const isDark = targetTheme === "dark";
@@ -802,7 +798,7 @@ function initTheme() {
                 }
             }
         });
-    }
+    });
 }
 
 // ==========================================
@@ -821,3 +817,96 @@ document.addEventListener("pointerdown", (e) => {
         ripple.remove();
     });
 });
+
+// ==========================================================
+// FUNGSI CUSTOM UI (TOAST NOTIFICATION & CONFIRM DIALOG)
+// ==========================================================
+
+// 1. Pembuat Toast (Notifikasi Pop-up Kanan Atas/Tengah)
+function showToast(message, type = "success") {
+    let container = document.getElementById("toast-container");
+    
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toast-container";
+        container.className = "toast-container";
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    
+    let iconClass = "fa-solid fa-circle-check"; 
+    if (type === "error") iconClass = "fa-solid fa-circle-exclamation";
+    if (type === "warning") iconClass = "fa-solid fa-triangle-exclamation";
+
+    toast.innerHTML = `
+        <i class="${iconClass} toast-icon"></i>
+        <span style="flex: 1;">${message}</span>
+        <i class="fa-solid fa-xmark toast-close"></i>
+    `;
+
+    container.appendChild(toast);
+
+    const timer = setTimeout(() => {
+        removeToast(toast);
+    }, 3000);
+
+    toast.querySelector(".toast-close").addEventListener("click", () => {
+        clearTimeout(timer);
+        removeToast(toast);
+    });
+}
+
+function removeToast(toast) {
+    toast.classList.add("toast-leave");
+    toast.addEventListener("animationend", () => {
+        toast.remove();
+    });
+}
+
+// 2. Pembuat Custom Confirm Dialog (Ganti confirm bawaan)
+function showConfirmDialog(message) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay active";
+        overlay.style.zIndex = "10000"; 
+
+        const box = document.createElement("div");
+        box.className = "modal-box"; 
+        box.style.maxWidth = "350px";
+        box.innerHTML = `
+            <div class="modal-header" style="margin-bottom: 15px;">
+                <h2 style="font-size: 18px; color: var(--text);">Konfirmasi</h2>
+            </div>
+            <p style="margin-bottom: 25px; font-size: 14px; color: var(--text-light); line-height: 1.5;">${message}</p>
+            <div class="modal-actions" style="margin-top: 0;">
+                <button id="confirm-no" class="btn-secondary">Batal</button>
+                <button id="confirm-yes" class="btn-primary" style="background: var(--danger);">Ya, Hapus</button>
+            </div>
+        `;
+        
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        const btnYes = box.querySelector("#confirm-yes");
+        const btnNo = box.querySelector("#confirm-no");
+
+        const closeDialog = (result) => {
+            overlay.classList.remove("active");
+            setTimeout(() => overlay.remove(), 300);
+            resolve(result);
+        };
+
+        btnYes.onclick = () => closeDialog(true);
+        btnNo.onclick = () => closeDialog(false);
+    });
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker terdaftar!', reg))
+            .catch(err => console.log('Gagal mendaftarkan Service Worker:', err));
+    });
+}

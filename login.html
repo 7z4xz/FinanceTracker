@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login / Sign Up - Ledger Finance</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <!-- Google Font & Font Awesome -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,7 +80,50 @@
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
-        // 3. Logika Toggle antara Login & Sign Up
+        // 3. Sistem Toast Notification (Pengganti alert() bawaan)
+        function showToast(message, type = "error") {
+            let container = document.getElementById("toast-container");
+            
+            if (!container) {
+                container = document.createElement("div");
+                container.id = "toast-container";
+                container.className = "toast-container";
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement("div");
+            toast.className = `toast ${type}`;
+            
+            let iconClass = "fa-solid fa-circle-check"; 
+            if (type === "error") iconClass = "fa-solid fa-circle-exclamation";
+            if (type === "warning") iconClass = "fa-solid fa-triangle-exclamation";
+
+            toast.innerHTML = `
+                <i class="${iconClass} toast-icon"></i>
+                <span style="flex: 1;">${message}</span>
+                <i class="fa-solid fa-xmark toast-close"></i>
+            `;
+
+            container.appendChild(toast);
+
+            const timer = setTimeout(() => {
+                removeToast(toast);
+            }, 3000);
+
+            toast.querySelector(".toast-close").addEventListener("click", () => {
+                clearTimeout(timer);
+                removeToast(toast);
+            });
+        }
+
+        function removeToast(toast) {
+            toast.classList.add("toast-leave");
+            toast.addEventListener("animationend", () => {
+                toast.remove();
+            });
+        }
+
+        // 4. Logika Toggle antara Login & Sign Up
         let isSignUp = false;
         const toggleModeBtn = document.getElementById("toggle-mode");
         const nameGroup = document.getElementById("name-group");
@@ -102,11 +150,10 @@
                 footerText.innerHTML = `Don't have an account? <a href="#" id="toggle-mode">Sign up</a>`;
             }
             
-            // Re-bind event listener karena innerHTML mereset elemen link toggle
             document.getElementById("toggle-mode").addEventListener("click", arguments.callee);
         });
 
-        // 4. Logika Submit Form (Login / Sign Up ke Google Sheets)
+        // 5. Logika Submit Form (Login / Sign Up ke Google Sheets dengan Toast)
         const authForm = document.getElementById("auth-form");
         authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -117,7 +164,7 @@
             const nama = isSignUp ? namaInput : "";
 
             if (isSignUp && !nama) {
-                alert("Mohon masukkan nama lengkap Anda!");
+                showToast("Mohon masukkan nama lengkap Anda!", "error");
                 return;
             }
 
@@ -136,36 +183,31 @@
                 const result = await response.json();
                 
                 if (result.status === "success") {
-                    // Simpan identitas user yang aktif ke browser
                     localStorage.setItem("ledger_user", username);
                     localStorage.setItem("ledger_name", result.nama);
 
-                    // Sembunyikan panel form kaca
                     document.getElementById("auth-screen").classList.add("hidden-scene");
 
-                    // Siapkan sapaan sinematik kustom
                     const splashScreen = document.getElementById("splash-screen");
                     const welcomeText = document.getElementById("dynamic-welcome-text");
                     
                     welcomeText.innerText = isSignUp ? `Welcome, ${result.nama}` : `Welcome back, ${result.nama}`;
                     splashScreen.classList.remove("hidden-scene");
 
-                    // TRIGGER ANIMASINYA DI SINI! (Seperti menekan tombol play)
                     welcomeText.classList.add("animate-welcome");
 
-                    // Jeda animasi selama 2.5 detik, lalu pindah mulus ke index.html
                     setTimeout(() => {
                         window.location.href = "index.html";
                     }, 2500);
 
                 } else {
-                    alert(result.message);
+                    showToast(result.message || "Gagal masuk, periksa kembali akun Anda.", "error");
                     submitBtn.innerText = isSignUp ? "Sign Up" : "Continue";
                     submitBtn.disabled = false;
                 }
             } catch (error) {
                 console.error("Error:", error);
-                alert("Gagal terhubung ke server. Periksa koneksi internet Anda.");
+                showToast("Gagal terhubung ke server. Periksa koneksi internet Anda.", "error");
                 submitBtn.innerText = isSignUp ? "Sign Up" : "Continue";
                 submitBtn.disabled = false;
             }

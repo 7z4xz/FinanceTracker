@@ -332,6 +332,7 @@ img{
     cursor: pointer;
     box-shadow: 0 6px 20px var(--card-shadow);
     transition: .3s;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .icon-btn:hover{
@@ -368,6 +369,7 @@ img{
     color: var(--primary);
     cursor: pointer;
     font-weight: 600;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 table{
@@ -472,6 +474,7 @@ tbody tr:hover{
     border-radius: 6px;
     cursor: pointer;
     transition: 0.3s;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .filter-btn:hover {
@@ -504,6 +507,7 @@ tbody tr:hover{
 
 input, select, button, textarea {
     font-family: inherit;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile pada semua elemen tombol/form[cite: 6] */
 }
 
 .fab-btn {
@@ -521,6 +525,7 @@ input, select, button, textarea {
     cursor: pointer;
     transition: transform 0.2s;
     z-index: 999;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .fab-btn:hover {
@@ -584,6 +589,7 @@ input, select, button, textarea {
     font-size: 24px;
     color: var(--text-light);
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .form-group {
@@ -625,6 +631,7 @@ input, select, button, textarea {
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .btn-primary:hover {
@@ -639,6 +646,7 @@ input, select, button, textarea {
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .btn-secondary:hover {
@@ -681,6 +689,7 @@ input, select, button, textarea {
     cursor: pointer;
     z-index: 2;
     transition: color 0.3s ease;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 /* Jika Income dipilih: Geser ke kiri, warna Hijau */
@@ -698,6 +707,25 @@ input, select, button, textarea {
     background-color: var(--danger);
 }
 #type-expense:checked ~ label[for="type-expense"] {
+    color: white;
+}
+
+/* ========================================
+   CUSTOM TOGGLE SWITCH (THEME MODE - LIGHT / DARK)
+======================================== */
+#mode-light:checked ~ .toggle-slider {
+    left: 4px;
+    background-color: var(--primary);
+}
+#mode-light:checked ~ label[for="mode-light"] {
+    color: white;
+}
+
+#mode-dark:checked ~ .toggle-slider {
+    left: 50%;
+    background-color: #475569; /* Slate 600 untuk mode gelap */
+}
+#mode-dark:checked ~ label[for="mode-dark"] {
     color: white;
 }
 
@@ -943,6 +971,7 @@ input, select, button, textarea {
     cursor: pointer;
     transition: 0.3s;
     margin-top: 10px;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 .auth-btn:hover { background: #1d4ed8; transform: translateY(-2px); }
 
@@ -968,6 +997,7 @@ input, select, button, textarea {
     color: #f87171; /* Warna merah lembut */
     font-weight: 500;
     transition: background 0.3s ease, transform 0.3s ease, color 0.3s ease;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .logout-item:hover {
@@ -1029,8 +1059,6 @@ input, select, button, textarea {
     .sidebar-footer {
         margin-bottom: 30px; /* Memberikan jarak ekstra dari batas bawah layar HP */
     }
-    
-    /* ... (sisa kode media query lainnya biarkan tetap ada) ... */
 }
 
 /* ========================================
@@ -1052,6 +1080,7 @@ input, select, button, textarea {
     position: relative;
     transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
     vertical-align: middle;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 /* Efek saat kursor diarahkan (hover) */
@@ -1150,6 +1179,7 @@ input, select, button, textarea {
     background: var(--border-hover);
     border-radius: 20px;
     transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent; /* Menghilangkan highlight biru mobile[cite: 6] */
 }
 
 .upload-avatar-label:hover {
@@ -1188,4 +1218,84 @@ input, select, button, textarea {
 .profile-overlay.active {
     opacity: 1;
     visibility: visible;
+}
+
+/* ========================================
+   CUSTOM TOAST NOTIFICATION (REPLACEMENT FOR ALERT)
+======================================== */
+.toast-container {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none; /* Agar klik bisa tembus jika tidak kena kotaknya */
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 320px;
+    max-width: 90vw;
+    background: var(--surface);
+    color: var(--text);
+    padding: 14px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border-left: 5px solid var(--primary);
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+    animation: toastEnter 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Penyesuaian Shadow & Border untuk Dark Mode */
+[data-theme="dark"] .toast {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--primary);
+}
+
+/* Warna Varian Toast */
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: #F59E0B; }
+
+.toast i.toast-icon { font-size: 18px; }
+.toast.success i.toast-icon { color: var(--success); }
+.toast.error i.toast-icon { color: var(--danger); }
+.toast.warning i.toast-icon { color: #F59E0B; }
+
+.toast-close {
+    margin-left: auto;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: 0.2s;
+    padding: 4px;
+}
+.toast-close:hover { color: var(--text); }
+
+.toast.toast-leave {
+    animation: toastLeave 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes toastEnter {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastLeave {
+    to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+}
+
+@media (max-width: 768px) {
+    .toast-container {
+        top: 20px;
+        width: 90%;
+    }
+    .toast { min-width: 100%; }
 }

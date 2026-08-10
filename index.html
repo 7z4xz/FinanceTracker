@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <title>FinanceTracker</title>
+
+        <link rel="manifest" href="manifest.json">
+        <meta name="theme-color" content="#2563EB">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         
         <!-- Google Font -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,9 +98,6 @@
                     <button class="icon-btn" id="profile-btn" title="Profil Pengguna" style="padding: 3px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                         <img id="navbar-profile-img" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: none;">
                         <i class="fa-solid fa-user" id="navbar-default-icon" style="color: var(--primary); font-size: 16px;"></i>
-                    </button>
-                    <button class="icon-btn" id="theme-toggle" title="Ganti Tema">
-                        <i class="fa-regular fa-moon"></i>
                     </button>
                 </div>
 
@@ -247,6 +249,23 @@
                     </div>
                     <p style="color: var(--text-muted, #64748b); margin-bottom: 20px;">Pengaturan sistem koneksi dan preferensi aplikasi.</p>
                     
+                    <!-- KARTU PENGATURAN TEMA (LIGHT/DARK MODE) -->
+                    <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 16px; margin-bottom: 10px;">Tema Tampilan (Mode)</h3>
+                        <p style="font-size: 13px; color: var(--text-muted, #64748b); margin-bottom: 15px;">Pilih mode terang atau gelap sesuai kenyamanan Anda.</p>
+                        
+                        <div class="type-toggle-container" style="max-width: 320px;">
+                            <input type="radio" name="theme_mode" id="mode-light" value="light" hidden>
+                            <input type="radio" name="theme_mode" id="mode-dark" value="dark" hidden>
+                            
+                            <div class="toggle-slider"></div>
+                            
+                            <label for="mode-light" class="toggle-label"><i class="fa-solid fa-sun" style="margin-right: 5px;"></i> Light</label>
+                            <label for="mode-dark" class="toggle-label"><i class="fa-solid fa-moon" style="margin-right: 5px;"></i> Dark</label>
+                        </div>
+                    </div>
+
+                    <!-- KARTU API URL -->
                     <div class="card" style="padding: 20px;">
                         <h3 style="font-size: 16px; margin-bottom: 10px;">Google Apps Script API URL</h3>
                         <p style="font-size: 13px; color: var(--text-muted, #64748b); margin-bottom: 10px;">URL yang menghubungkan website ini langsung ke Google Sheets Anda.</p>
