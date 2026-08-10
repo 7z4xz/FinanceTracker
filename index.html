@@ -67,9 +67,10 @@
                         <i class="fa-solid fa-chart-line"></i>
                         <span>Analytics</span>
                     </a>
-                    <a href="#" class="nav-item" data-target="budget-section">
-                        <i class="fa-solid fa-bullseye"></i>
-                        <span>Budget</span>
+                    <!-- MENU WISHLIST (Menggantikan Budget) -->
+                    <a href="#" class="nav-item" data-target="wishlist-section">
+                        <i class="fa-solid fa-gift"></i>
+                        <span>Wishlist</span>
                     </a>
                     <a href="#" class="nav-item" data-target="settings-section">
                         <i class="fa-solid fa-gear"></i>
@@ -185,9 +186,10 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                                 <h3 style="font-size: 16px; margin: 0;">Income vs Expense</h3>
                                 
-                                <!-- Tombol Filter Rentang Waktu -->
+                                <!-- Tombol Filter Rentang Waktu (Termasuk 1D) -->
                                 <div class="chart-filters">
-                                    <button class="filter-btn active" data-range="7">1W</button>
+                                    <button class="filter-btn active" data-range="1">1D</button>
+                                    <button class="filter-btn" data-range="7">1W</button>
                                     <button class="filter-btn" data-range="30">1M</button>
                                     <button class="filter-btn" data-range="90">3M</button>
                                     <button class="filter-btn" data-range="365">1Y</button>
@@ -210,34 +212,22 @@
                     </div>
                 </section>
                 
-                <!-- 4. BUDGET SECTION -->
-                <section id="budget-section" style="padding: 30px 0;">
-                    <div class="section-header" style="margin-bottom: 15px;">
-                        <h2>Budget Planner</h2>
-                    </div>
-                    <p style="color: var(--text-muted, #64748b); margin-bottom: 20px;">Kelola batas maksimal pengeluaran kategori Anda tiap bulan.</p>
-                    
-                    <div class="card" style="padding: 20px;">
-                        <h3 style="font-size: 16px; margin-bottom: 15px;">Target Anggaran Kategori</h3>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
-                                <span>Makanan & Minuman (Food)</span>
-                                <span style="font-weight: 600;">Limit: Rp1.500.000</span>
-                            </div>
-                            <div style="background: var(--border-color, #e2e8f0); border-radius: 10px; height: 10px; width: 100%;">
-                                <div style="background: #2563eb; width: 35%; height: 100%; border-radius: 10px;"></div>
-                            </div>
-                        </div>
-
+                <!-- 4. WISHLIST SECTION -->
+                <section id="wishlist-section" style="padding: 30px 0;">
+                    <div class="section-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
-                                <span>Transportasi</span>
-                                <span style="font-weight: 600;">Limit: Rp500.000</span>
-                            </div>
-                            <div style="background: var(--border-color, #e2e8f0); border-radius: 10px; height: 10px; width: 100%;">
-                                <div style="background: #10b981; width: 20%; height: 100%; border-radius: 10px;"></div>
-                            </div>
+                            <h2>Wishlist Impian</h2>
+                            <p style="color: var(--text-muted, #64748b); margin-top: 5px;">Pantau progres pencapaian barang impian berdasarkan Total Balance Anda.</p>
+                        </div>
+                        <button id="open-wishlist-modal-btn" class="btn-primary" style="padding: 8px 16px; font-size: 14px;">
+                            <i class="fa-solid fa-plus"></i> Tambah Wishlist
+                        </button>
+                    </div>
+                    
+                    <!-- Container Daftar Wishlist -->
+                    <div id="wishlist-container" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div class="card" style="padding: 20px; text-align: center; color: var(--text-light);">
+                            Belum ada wishlist yang ditambahkan.
                         </div>
                     </div>
                 </section>
@@ -279,12 +269,12 @@
         <!-- AREA MODAL & TOMBOL TAMBAH TRANSAKSI       -->
         <!-- ========================================== -->
 
-        <!-- Tombol Melayang -->
+        <!-- Tombol Melayang Tambah Transaksi -->
         <button id="open-modal-btn" class="fab-btn">
             <i class="fa-solid fa-plus"></i> + Tambah Transaksi
         </button>
 
-        <!-- Pop-up Modal Form -->
+        <!-- Pop-up Modal Form Transaksi -->
         <div id="transaction-modal" class="modal-overlay hidden">
             <div class="modal-box">
                 <div class="modal-header">
@@ -293,7 +283,7 @@
                 </div>
                 <form id="transaction-form">
                     
-                    <!-- Pilihan Jenis Transaksi (Toggle Switch Animasi Kiri-Kanan) -->
+                    <!-- Pilihan Jenis Transaksi -->
                     <div class="form-group">
                         <label>Jenis Transaksi</label>
                         <div class="type-toggle-container">
@@ -306,13 +296,22 @@
                             <label for="type-expense" class="toggle-label">Expense</label>
                         </div>
                     </div>
+
+                    <!-- Input Tanggal & Waktu (Dibuat 2 Kolom Berdampingan yang Elegan) -->
+                    <div class="form-group">
+                        <label>Tanggal & Waktu</label>
+                        <div style="display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 10px;">
+                            <input type="date" id="tanggal-transaksi" required autocomplete="off">
+                            <input type="time" id="waktu-transaksi" required autocomplete="off">
+                        </div>
+                    </div>
                     
                     <div class="form-group">
                         <label for="kategori">Kategori</label>
                         <input type="text" id="kategori" placeholder="Contoh: Makanan, Gaji, Transport" required autocomplete="off">
                     </div>
                     
-                    <!-- Nominal dengan Format Otomatis Titik (Contoh: 50.000) -->
+                    <!-- Nominal dengan Format Otomatis Titik -->
                     <div class="form-group">
                         <label for="nominal">Nominal (Rp)</label>
                         <input type="text" id="nominal" placeholder="0" required autocomplete="off">
@@ -326,6 +325,32 @@
                     <div class="modal-actions">
                         <button type="button" id="cancel-btn" class="btn-secondary">Batal</button>
                         <button type="submit" id="submit-btn" class="btn-primary">Simpan Transaksi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- POP-UP MODAL FORM WISHLIST BARU            -->
+        <!-- ========================================== -->
+        <div id="wishlist-modal" class="modal-overlay hidden">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h2>Tambah Wishlist Baru</h2>
+                    <button id="close-wishlist-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <form id="wishlist-form">
+                    <div class="form-group">
+                        <label for="wishlist-nama">Nama Barang / Impian</label>
+                        <input type="text" id="wishlist-nama" placeholder="Contoh: MacBook Pro M3" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="wishlist-harga">Target Harga (Rp)</label>
+                        <input type="text" id="wishlist-harga" placeholder="0" required autocomplete="off">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-wishlist-btn" class="btn-secondary">Batal</button>
+                        <button type="submit" id="submit-wishlist-btn" class="btn-primary">Simpan Wishlist</button>
                     </div>
                 </form>
             </div>

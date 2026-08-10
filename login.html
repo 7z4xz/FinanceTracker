@@ -21,6 +21,11 @@
 </head>
 <body>
 
+    <!-- INTRO VIDEO LOGO (SPLASH AWAL) -->
+    <div id="intro-overlay" class="intro-overlay">
+        <video id="intro-video" src="logo-intro.mp4" autoplay muted playsinline></video>
+    </div>
+
     <!-- BACKGROUND ANIMATION (GLOW & TRIANGLES) -->
     <div class="bg-animation">
         <div class="glow-shape g-1"></div>
@@ -38,7 +43,8 @@
     </div>
 
     <!-- FASE AUTHENTICATION (LOGIN / SIGN UP) -->
-    <div id="auth-screen" class="screen-layer">
+    <!-- Menggunakan hidden-scene di awal agar tersembunyi dengan bersih tanpa inline style konflik -->
+    <div id="auth-screen" class="screen-layer hidden-scene">
         <div class="glass-panel">
             <div class="auth-header">
                 <h2 id="form-title">Ledger</h2>
@@ -71,16 +77,46 @@
     </div>
 
     <script>
-        // 1. Konfigurasi URL API Apps Script Anda
+        // 1. ROUTE GUARDING: Jika sudah login, langsung lempar ke index
+        if (localStorage.getItem("ledger_user")) {
+            window.location.href = "index.html";
+        }
+
+        // 2. Konfigurasi URL API Apps Script Anda
         const API_URL = "https://script.google.com/macros/s/AKfycbyASLjcGWxb3pAPh54oisnK1BgESpXww_mG1BNbPSEHVqgoocWRiBMbABkB33OJPcpR/exec";
 
-        // 2. Set Tema Gelap/Terang Sesuai Memori Terakhir
+        // 3. Set Tema Gelap/Terang Sesuai Memori Terakhir
         const savedTheme = localStorage.getItem("theme");
         if (savedTheme === "dark") {
             document.documentElement.setAttribute("data-theme", "dark");
         }
 
-        // 3. Sistem Toast Notification (Pengganti alert() bawaan)
+        // 4. Logika Animasi Intro Logo
+        document.addEventListener("DOMContentLoaded", () => {
+            const introOverlay = document.getElementById("intro-overlay");
+            const introVideo = document.getElementById("intro-video");
+            const authScreen = document.getElementById("auth-screen");
+
+            const revealAuthScreen = () => {
+                if (introOverlay) {
+                    introOverlay.classList.add("fade-out");
+                }
+                if (authScreen) {
+                    authScreen.classList.remove("hidden-scene"); // Memunculkan form login dengan mulus
+                }
+            };
+
+            if (introVideo) {
+                introVideo.addEventListener("ended", revealAuthScreen);
+                introVideo.addEventListener("error", revealAuthScreen);
+                introOverlay.addEventListener("click", revealAuthScreen);
+                setTimeout(revealAuthScreen, 3500);
+            } else {
+                revealAuthScreen();
+            }
+        });
+
+        // 5. Sistem Toast Notification
         function showToast(message, type = "error") {
             let container = document.getElementById("toast-container");
             
@@ -122,38 +158,38 @@
                 toast.remove();
             });
         }
-
-        // 4. Logika Toggle antara Login & Sign Up
+        
+        // 6. Logika Toggle antara Login & Sign Up (Menggunakan Event Delegation)
         let isSignUp = false;
-        const toggleModeBtn = document.getElementById("toggle-mode");
         const nameGroup = document.getElementById("name-group");
         const formTitle = document.getElementById("form-title");
         const formSubtitle = document.getElementById("form-subtitle");
         const submitBtn = document.getElementById("auth-submit-btn");
         const footerText = document.getElementById("footer-text");
 
-        toggleModeBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            isSignUp = !isSignUp;
-            
-            if (isSignUp) {
-                nameGroup.style.display = "block";
-                formTitle.innerText = "Create Account";
-                formSubtitle.innerText = "Sign up to start tracking finance";
-                submitBtn.innerText = "Sign Up";
-                footerText.innerHTML = `Already have an account? <a href="#" id="toggle-mode">Log in</a>`;
-            } else {
-                nameGroup.style.display = "none";
-                formTitle.innerText = "Ledger";
-                formSubtitle.innerText = "Log in to your account";
-                submitBtn.innerText = "Continue";
-                footerText.innerHTML = `Don't have an account? <a href="#" id="toggle-mode">Sign up</a>`;
+        footerText.addEventListener("click", (e) => {
+            // Cek apakah yang diklik adalah link dengan id "toggle-mode"
+            if (e.target && e.target.id === "toggle-mode") {
+                e.preventDefault();
+                isSignUp = !isSignUp;
+                
+                if (isSignUp) {
+                    nameGroup.style.display = "block";
+                    formTitle.innerText = "Create Account";
+                    formSubtitle.innerText = "Sign up to start tracking finance";
+                    submitBtn.innerText = "Sign Up";
+                    footerText.innerHTML = `Already have an account? <a href="#" id="toggle-mode">Log in</a>`;
+                } else {
+                    nameGroup.style.display = "none";
+                    formTitle.innerText = "Ledger";
+                    formSubtitle.innerText = "Log in to your account";
+                    submitBtn.innerText = "Continue";
+                    footerText.innerHTML = `Don't have an account? <a href="#" id="toggle-mode">Sign up</a>`;
+                }
             }
-            
-            document.getElementById("toggle-mode").addEventListener("click", arguments.callee);
         });
 
-        // 5. Logika Submit Form (Login / Sign Up ke Google Sheets dengan Toast)
+        // 7. Logika Submit Form
         const authForm = document.getElementById("auth-form");
         authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -186,6 +222,7 @@
                     localStorage.setItem("ledger_user", username);
                     localStorage.setItem("ledger_name", result.nama);
 
+                    // Menyembunyikan form login dengan mulus menggunakan class
                     document.getElementById("auth-screen").classList.add("hidden-scene");
 
                     const splashScreen = document.getElementById("splash-screen");

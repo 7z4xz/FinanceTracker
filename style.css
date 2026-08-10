@@ -1299,3 +1299,73 @@ input, select, button, textarea {
     }
     .toast { min-width: 100%; }
 }
+
+/* ========================================
+   INTRO VIDEO LOGO (SPLASH AWAL)
+======================================== */
+.intro-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #020617; /* DIKUNCI GELAP: Agar mix-blend-mode: screen selalu sempurna di Light/Dark mode */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.intro-overlay.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#intro-video {
+    width: 250px; /* Sesuaikan ukuran logo */
+    height: auto;
+    mix-blend-mode: screen; /* Menghilangkan background hitam video secara transparan */
+}
+
+/* ========================================
+   CUSTOM DATETIME & WISHLIST STYLING
+======================================== */
+input[type="datetime-local"] {
+    color-scheme: dark;
+}
+
+[data-theme="light"] input[type="datetime-local"] {
+    color-scheme: light;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Hover efek pada tombol hapus wishlist */
+.delete-wishlist-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+    transition: all 0.2s ease;
+}
+
+/* ========================================
+   CUSTOM DATE & TIME INPUT ICON FIX (DARK MODE)
+======================================== */
+input[type="date"],
+input[type="time"] {
+    color-scheme: light; /* Default terang */
+}
+
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"] {
+    color-scheme: dark; /* Memaksa ikon kalender & jam bawaan browser menjadi putih di dark mode */
+}

@@ -7,20 +7,42 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyz5rYEeXVJKExadajLkoal
 let trendChartInstance = null;
 let categoryChartInstance = null;
 let allTransactions = []; // Menyimpan semua data dari Google Sheets
-let currentChartRange = 7; // Default grafik menampilkan 7 hari terakhir (1W)[cite: 7]
+let currentChartRange = 1; // Default grafik menampilkan 1 hari terakhir (1D)
 
 // ==========================================
 // UTAMA: DOM CONTENT LOADED (SATU PINTU)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Inisialisasi Aplikasi, Waktu, & Dark Mode[cite: 7]
+    // ==========================================
+    // A. PROTEKSI HALAMAN (ROUTE GUARDING)
+    // ==========================================
+    const currentUsername = localStorage.getItem("ledger_user");
+    if (!currentUsername) {
+        window.location.href = "login.html";
+        return; 
+    }
+
+    // ==========================================
+    // B. LOGIKA TOMBOL LOG OUT
+    // ==========================================
+    const logoutBtn = document.querySelector(".logout-item"); 
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            
+            const isConfirm = await showConfirmDialog("Apakah Anda yakin ingin keluar dari aplikasi?");
+            if (isConfirm) {
+                localStorage.removeItem("ledger_user");
+                localStorage.removeItem("ledger_name");
+                window.location.href = "login.html";
+            }
+        });
+    }
+
     init();
     initTheme();
-
-    // 2. Memuat Data Awal dari Google Sheets via API (Berdasarkan User Login)[cite: 7]
     loadTransactions();
 
-    // Cek foto profil awal untuk navbar saat halaman dimuat
     (async function() {
         const username = localStorage.getItem("ledger_user");
         if (username) {
@@ -39,13 +61,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     })();
 
-    // Tampilkan URL API di halaman Settings[cite: 7]
     const settingApiInput = document.getElementById("display-api-url");
-    if (settingApiInput) {
-        settingApiInput.value = API_URL;
-    }
+    if (settingApiInput) settingApiInput.value = API_URL;
 
-    // 3. Deklarasi Elemen Modal & Form[cite: 7]
+    // Deklarasi Elemen Modal & Form Transaksi
     const modal = document.getElementById("transaction-modal");
     const openModalBtn = document.getElementById("open-modal-btn");
     const closeModalBtn = document.getElementById("close-modal-btn");
@@ -53,25 +72,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const transactionForm = document.getElementById("transaction-form");
     const submitBtn = document.getElementById("submit-btn");
 
-    // Fungsi Buka Modal[cite: 7]
     if (openModalBtn && modal) {
         openModalBtn.addEventListener("click", () => {
             modal.classList.remove("hidden");
             setTimeout(() => modal.classList.add("active"), 10);
+            
+            // Set input date & time secara terpisah dengan waktu lokal saat ini
+            const tanggalInput = document.getElementById("tanggal-transaksi");
+            const waktuInput = document.getElementById("waktu-transaksi");
+            
+            if (tanggalInput && waktuInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+
+                tanggalInput.value = `${year}-${month}-${day}`;
+                waktuInput.value = `${hours}:${minutes}`;
+            }
         });
     }
 
-    // Fungsi Tutup Modal & Reset Form[cite: 7]
     const closeModal = () => {
         if (modal) {
             modal.classList.remove("active");
-            setTimeout(() => {
-                modal.classList.add("hidden");
-            }, 300);
+            setTimeout(() => modal.classList.add("hidden"), 300);
         }
-        if (transactionForm) {
-            transactionForm.reset();
-        }
+        if (transactionForm) transactionForm.reset();
     };
 
     if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
@@ -82,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4. Penanganan Submit Form Transaksi (Menggunakan Custom Toast)[cite: 7]
     if (transactionForm) {
         transactionForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -90,6 +118,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const kategoriInput = document.getElementById("kategori");
             const nominalInput = document.getElementById("nominal");
             const deskripsiInput = document.getElementById("deskripsi");
+            const tanggalInput = document.getElementById("tanggal-transaksi");
+            const waktuInput = document.getElementById("waktu-transaksi");
             const selectedType = document.querySelector('input[name="jenis"]:checked');
 
             if (!nominalInput || !deskripsiInput || !selectedType) {
@@ -97,19 +127,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Ambil username user yang sedang aktif dari memori browser[cite: 7]
             const currentUsername = localStorage.getItem("ledger_user");
-
-            // Bersihkan titik format ribuan pada nominal sebelum dikirim (Contoh: "50.000" jadi 50000)[cite: 7]
             const rawNominal = nominalInput.value.replace(/\./g, '');
 
+            // Gabungkan tanggal dan waktu terpisah menjadi format standar
+            const tglVal = tanggalInput ? tanggalInput.value : "";
+            const wktVal = waktuInput ? waktuInput.value : "";
+            const combinedTanggal = (tglVal && wktVal) ? `${tglVal}T${wktVal}` : tglVal;
+
             const formData = {
-                action: "add_transaction", // <-- WAJIB AGAR MASUK KE TAB TRANSACTIONS DENGAN BENAR[cite: 7]
-                username: currentUsername,  // <-- AGAR DATA TERKAIT DENGAN AKUN YANG LOGIN[cite: 7]
-                jenis: selectedType.value,  // Mengambil nilai dari Toggle Switch (Income / Expense)[cite: 7]
+                action: "add_transaction", 
+                username: currentUsername,  
+                jenis: selectedType.value,  
                 kategori: kategoriInput ? kategoriInput.value : "-",
                 nominal: Number(rawNominal),
-                deskripsi: deskripsiInput.value
+                deskripsi: deskripsiInput.value,
+                tanggal: combinedTanggal
             };
 
             if (submitBtn) {
@@ -133,7 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             } catch (error) {
                 console.error("Error kirim data:", error);
-                showToast("Gagal terhubung ke server. Periksa koneksi internet Anda.", "error");
+                showToast("Gagal terhubung ke server.", "error");
             } finally {
                 if (submitBtn) {
                     submitBtn.innerText = "Simpan Transaksi";
@@ -143,7 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4.1 Auto Format Titik Ribuan pada Input Nominal (Contoh: 50000 jadi 50.000)[cite: 7]
     const nominalInputField = document.getElementById("nominal");
     if (nominalInputField) {
         nominalInputField.addEventListener("input", function() {
@@ -156,7 +188,82 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 5. FITUR HAPUS TRANSAKSI TERPILIH (MULTI-SELECT DELETE MENGGUNAKAN CUSTOM CONFIRM)[cite: 7]
+    // ==========================================
+    // WISHLIST INTERAKTIF
+    // ==========================================
+    const wishlistModal = document.getElementById("wishlist-modal");
+    const openWishlistModalBtn = document.getElementById("open-wishlist-modal-btn");
+    const closeWishlistModalBtn = document.getElementById("close-wishlist-modal-btn");
+    const cancelWishlistBtn = document.getElementById("cancel-wishlist-btn");
+    const wishlistForm = document.getElementById("wishlist-form");
+    const wishlistHargaInput = document.getElementById("wishlist-harga");
+
+    if (wishlistHargaInput) {
+        wishlistHargaInput.addEventListener("input", function() {
+            let value = this.value.replace(/[^0-9]/g, '');
+            if (value) this.value = parseInt(value, 10).toLocaleString('id-ID');
+            else this.value = '';
+        });
+    }
+
+    if (openWishlistModalBtn && wishlistModal) {
+        openWishlistModalBtn.addEventListener("click", () => {
+            wishlistModal.classList.remove("hidden");
+            setTimeout(() => wishlistModal.classList.add("active"), 10);
+        });
+    }
+
+    const closeWishlistModal = () => {
+        if (wishlistModal) {
+            wishlistModal.classList.remove("active");
+            setTimeout(() => wishlistModal.classList.add("hidden"), 300);
+        }
+        if (wishlistForm) wishlistForm.reset();
+    };
+
+    if (closeWishlistModalBtn) closeWishlistModalBtn.addEventListener("click", closeWishlistModal);
+    if (cancelWishlistBtn) cancelWishlistBtn.addEventListener("click", closeWishlistModal);
+    if (wishlistModal) {
+        wishlistModal.addEventListener("click", (e) => {
+            if (e.target === wishlistModal) closeWishlistModal();
+        });
+    }
+
+    if (wishlistForm) {
+        wishlistForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const namaInput = document.getElementById("wishlist-nama");
+            const hargaInput = document.getElementById("wishlist-harga");
+
+            if (!namaInput || !hargaInput) return;
+
+            const rawHarga = hargaInput.value.replace(/\./g, '');
+            const targetHarga = Number(rawHarga);
+
+            if (targetHarga <= 0) {
+                showToast("Target harga harus lebih dari 0!", "error");
+                return;
+            }
+
+            const newWishlist = {
+                id: 'WISH-' + Date.now(),
+                nama: namaInput.value.trim(),
+                harga: targetHarga
+            };
+
+            const wishlists = getWishlists();
+            wishlists.push(newWishlist);
+            saveWishlists(wishlists);
+
+            showToast("Wishlist berhasil ditambahkan!", "success");
+            closeWishlistModal();
+            renderWishlists();
+        });
+    }
+
+    // ==========================================
+    // HAPUS TRANSAKSI TERPILIH
+    // ==========================================
     const deleteSelectedBtn = document.getElementById("delete-selected-btn");
     if (deleteSelectedBtn) {
         deleteSelectedBtn.addEventListener("click", async () => {
@@ -179,8 +286,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    showToast("Transaksi terpilih berhasil dihapus dan saldo diperbarui!", "success");
-                    loadTransactions(); // Otomatis me-refresh tabel, kartu balance, dan grafik kembali ke posisi semula[cite: 7]
+                    showToast("Transaksi terpilih berhasil dihapus!", "success");
+                    loadTransactions(); 
                 } else {
                     showToast("Gagal menghapus transaksi.", "error");
                 }
@@ -194,7 +301,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 6. FITUR SIDEBAR PROFIL KANAN (SLIDE-IN PANEL)
+    // ==========================================
+    // SIDEBAR PROFIL KANAN
+    // ==========================================
     const profileBtn = document.getElementById("profile-btn");
     const profilePanel = document.getElementById("profile-panel");
     const profileOverlay = document.getElementById("profile-overlay");
@@ -221,7 +330,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (closeProfileBtn) closeProfileBtn.addEventListener("click", closeProfilePanel);
     if (profileOverlay) profileOverlay.addEventListener("click", closeProfilePanel);
 
-    // Konversi & Kompresi Otomatis Gambar Profil agar Ringan & Aman untuk Google Sheets
     if (avatarInput) {
         avatarInput.addEventListener("change", function(e) {
             const file = e.target.files[0];
@@ -251,8 +359,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-
-                        // Kompres ke format JPEG dengan kualitas 0.7 (sangat ringan)
                         base64Avatar = canvas.toDataURL('image/jpeg', 0.7);
                         profileAvatarImg.src = base64Avatar;
                     };
@@ -263,7 +369,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Ambil Data Profil dari Server
     async function loadProfileData() {
         const username = localStorage.getItem("ledger_user");
         if (!username) return;
@@ -282,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (result.photo) {
                     base64Avatar = result.photo;
                     profileAvatarImg.src = base64Avatar;
-                    updateNavbarAvatar(result.photo); // Update foto di navbar secara instan
+                    updateNavbarAvatar(result.photo);
                 } else {
                     profileAvatarImg.src = "https://via.placeholder.com/100";
                     updateNavbarAvatar("");
@@ -293,7 +398,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Simpan Perubahan Profil (Menggunakan Toast Notification)
     if (profileForm) {
         profileForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -328,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     localStorage.setItem("ledger_user", result.username);
                     localStorage.setItem("ledger_name", result.nama);
 
-                    updateNavbarAvatar(base64Avatar); // Update navbar langsung
+                    updateNavbarAvatar(base64Avatar);
                     updateGreeting();
                     closeProfilePanel();
                     loadTransactions();
@@ -345,7 +449,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 7. FITUR TOMBOL FILTER GRAFIK (1W, 1M, 3M, 1Y, All)[cite: 7]
+    // ==========================================
+    // FILTER GRAFIK WAKTU
+    // ==========================================
     const filterBtns = document.querySelectorAll(".filter-btn");
     if (filterBtns.length > 0) {
         filterBtns.forEach(btn => {
@@ -361,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 8. NAVIGASI SIDEBAR (KLIK & SCROLLSPY)[cite: 7]
+    // Navigasi & Hamburger Menu
     const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
     const sections = document.querySelectorAll("main section[id]");
 
@@ -400,7 +506,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sections.forEach(section => observer.observe(section));
 
-    // 9. HAMBARGER MENU MOBILE TOGGLE[cite: 7]
     const hamburgerBtn = document.getElementById("hamburger-btn");
     const sidebar = document.querySelector(".sidebar");
 
@@ -429,12 +534,104 @@ document.addEventListener("DOMContentLoaded", () => {
 // FUNGSI PENDUKUNG / HELPER
 // ==========================================
 
+function getWishlists() {
+    const username = localStorage.getItem("ledger_user");
+    if (!username) return [];
+    try {
+        return JSON.parse(localStorage.getItem(`ledger_wishlists_${username}`)) || [];
+    } catch(e) {
+        return [];
+    }
+}
+
+function saveWishlists(list) {
+    const username = localStorage.getItem("ledger_user");
+    if (!username) return;
+    localStorage.setItem(`ledger_wishlists_${username}`, JSON.stringify(list));
+}
+
+function renderWishlists() {
+    const container = document.getElementById("wishlist-container");
+    if (!container) return;
+
+    const wishlists = getWishlists();
+    
+    // Hitung total balance saat ini dari allTransactions
+    let income = 0, expense = 0;
+    allTransactions.forEach(item => {
+        const jenis = (item.jenis || "").toLowerCase();
+        const nominal = Number(item.nominal) || 0;
+        if (jenis === "income" || jenis === "pemasukan") income += nominal;
+        else if (jenis === "expense" || jenis === "pengeluaran") expense += nominal;
+    });
+    const currentBalance = income - expense;
+
+    if (wishlists.length === 0) {
+        container.innerHTML = `
+            <div class="card" style="padding: 20px; text-align: center; color: var(--text-light);">
+                Belum ada wishlist yang ditambahkan.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = "";
+    wishlists.forEach(item => {
+        let percentage = 0;
+        if (item.harga > 0) {
+            percentage = (currentBalance / item.harga) * 100;
+            if (percentage < 0) percentage = 0;
+            if (percentage > 100) percentage = 100; // Maksimal 100%
+        }
+        const percentFormatted = percentage.toFixed(1);
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.cssText = "padding: 20px; position: relative;";
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                    <h3 style="font-size: 16px; margin: 0 0 4px 0; color: var(--text);">${item.nama}</h3>
+                    <span style="font-size: 13px; color: var(--text-light);">Target: Rp${item.harga.toLocaleString("id-ID")}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 15px; font-weight: 700; color: var(--primary);">${percentFormatted}%</span>
+                    <button class="delete-wishlist-btn" data-id="${item.id}" title="Hapus Wishlist" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+            <div style="background: var(--border-color, #334155); border-radius: 10px; height: 10px; width: 100%; overflow: hidden;">
+                <div class="wishlist-bar-fill" style="background: linear-gradient(90deg, var(--primary), #10b981); width: 0%; height: 100%; border-radius: 10px; transition: width 1.2s cubic-bezier(0.25, 1, 0.5, 1);"></div>
+            </div>
+        `;
+
+        // Tombol hapus wishlist item
+        card.querySelector(".delete-wishlist-btn").addEventListener("click", async () => {
+            const isConfirm = await showConfirmDialog(`Hapus wishlist "${item.nama}" dari daftar?`);
+            if (isConfirm) {
+                const updated = getWishlists().filter(w => w.id !== item.id);
+                saveWishlists(updated);
+                showToast("Wishlist berhasil dihapus.", "success");
+                renderWishlists();
+            }
+        });
+
+        container.appendChild(card);
+
+        // Memicu animasi geser (gliding animation) dengan sedikit jeda waktu
+        setTimeout(() => {
+            const fillBar = card.querySelector(".wishlist-bar-fill");
+            if (fillBar) {
+                fillBar.style.width = `${percentFormatted}%`;
+            }
+        }, 50);
+    });
+}
+
 function init() {
     console.log("FinanceTracker App Started");
     updateGreeting(); 
 }
 
-// Fungsi untuk mengganti ikon default navbar dengan foto profil bulat
 function updateNavbarAvatar(photoBase64) {
     const navImg = document.getElementById("navbar-profile-img");
     const navIcon = document.getElementById("navbar-default-icon");
@@ -470,7 +667,6 @@ function updateGreeting() {
 
     greetingEl.innerText = greetingText;
 
-    // Menampilkan Sapaan Personal dengan Nama User yang Sedang Login[cite: 7]
     if (greetingNameEl) {
         const userName = localStorage.getItem("ledger_name");
         if (userName) {
@@ -481,15 +677,12 @@ function updateGreeting() {
     }
 }
 
-// A. Mengambil Data dari Apps Script Berdasarkan Username Aktif (GET)[cite: 7]
 async function loadTransactions() {
     if (!API_URL) return;
 
-    // Ambil username user yang sedang aktif dari memori browser[cite: 7]
     const currentUsername = localStorage.getItem("ledger_user");
 
     try {
-        // Kirim parameter username ke Apps Script agar hanya mengambil data milik user tersebut[cite: 7]
         const response = await fetch(`${API_URL}?username=${currentUsername}`);
         const result = await response.json();
 
@@ -499,13 +692,13 @@ async function loadTransactions() {
             updateSummaryCards(allTransactions);
             renderTable(allTransactions);
             renderCharts(allTransactions, currentChartRange); 
+            renderWishlists(); 
         }
     } catch (error) {
         console.error("Gagal mengambil data transaksi:", error);
     }
 }
 
-// B. Menghitung Balance, Income, & Expense[cite: 7]
 function updateSummaryCards(data) {
     let income = 0, expense = 0;
 
@@ -529,13 +722,11 @@ function updateSummaryCards(data) {
     if (elExpense) elExpense.innerText = formatRp(expense);
 }
 
-// C. Menampilkan Tabel Interaktif dengan Checkbox & Klik Baris[cite: 7]
 function renderTable(data) {
     const tbody = document.querySelector("tbody");
     const theadTr = document.querySelector("table thead tr");
     if (!tbody || !theadTr) return;
 
-    // Tambahkan kolom checkbox pada header tabel[cite: 7]
     theadTr.innerHTML = `
         <th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" title="Pilih Semua"></th>
         <th>Date</th>
@@ -566,7 +757,6 @@ function renderTable(data) {
             <td>Rp${(Number(item.nominal) || 0).toLocaleString("id-ID")}</td>
         `;
 
-        // Interaksi Klik Baris: Memicu centang checkbox saat baris diketuk[cite: 7]
         tr.addEventListener("click", (e) => {
             if (e.target.tagName !== 'INPUT') {
                 const cb = tr.querySelector(".select-checkbox");
@@ -575,14 +765,12 @@ function renderTable(data) {
             }
         });
 
-        // Perbarui perhitungan saat checkbox diklik langsung[cite: 7]
         const cbInput = tr.querySelector(".select-checkbox");
         cbInput.addEventListener("change", updateSelectedCount);
 
         tbody.appendChild(tr);
     });
 
-    // Fitur "Pilih Semua" pada header[cite: 7]
     const selectAllCb = document.getElementById("select-all-checkbox");
     if (selectAllCb) {
         selectAllCb.addEventListener("change", (e) => {
@@ -593,7 +781,6 @@ function renderTable(data) {
     }
 }
 
-// Menghitung jumlah baris yang dicentang dan memunculkan tombol hapus[cite: 7]
 function updateSelectedCount() {
     const checkedCheckboxes = document.querySelectorAll(".select-checkbox:checked");
     const count = checkedCheckboxes.length;
@@ -606,117 +793,139 @@ function updateSelectedCount() {
     }
 }
 
-// D. RENDER GRAFIK ANALYTICS (CHART.JS) - Tampilan Elegan & Dinamis[cite: 7]
-function renderCharts(transactions, daysLimit = 7) {
+// =======================================================
+// RENDER GRAFIK ANALYTICS (TREN SALDO SATU GARIS)
+// =======================================================
+function renderCharts(transactions, daysLimit = 1) {
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
     const textColor = isDark ? '#94A3B8' : '#64748b';
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const tooltipBg = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.9)';
     const tooltipText = isDark ? '#0F172A' : '#ffffff';
 
-    // === LOGIKA FILTER WAKTU ===
-    let filteredTx = transactions;
+    const sortedTx = [...transactions].sort((a, b) => {
+        const dateA = new Date(a.tanggal).getTime();
+        const dateB = new Date(b.tanggal).getTime();
+        return (dateA || 0) - (dateB || 0);
+    });
+
+    let runningBalance = 0;
+    const txWithBalance = sortedTx.map(tx => {
+        const jenis = (tx.jenis || "").toLowerCase();
+        const nominal = Number(tx.nominal) || 0;
+        const isIncome = (jenis === "income" || jenis === "pemasukan");
+        
+        if (isIncome) runningBalance += nominal;
+        else runningBalance -= nominal;
+        
+        return { ...tx, balance: runningBalance, isIncome };
+    });
+
+    let filteredTx = txWithBalance;
     if (daysLimit !== 'all') {
         const now = new Date();
-        filteredTx = transactions.filter(tx => {
+        filteredTx = txWithBalance.filter(tx => {
             const txDate = new Date(tx.tanggal);
             if (isNaN(txDate.getTime())) return true; 
-            
             const diffTime = Math.abs(now - txDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             return diffDays <= daysLimit;
         });
     }
 
-    const dateMap = {};
+    const labels = [];
+    const dataPoints = [];
+    const pointColors = [];
     const categoryMap = {};
 
-    filteredTx.forEach(tx => {
-        const date = tx.tanggal || "Unk";
-        const jenis = (tx.jenis || "").toLowerCase();
-        const nominal = Number(tx.nominal) || 0;
-        
-        if (!dateMap[date]) dateMap[date] = { income: 0, expense: 0 };
+    const formatDateTime = (dateStr) => {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+        const day = d.getDate();
+        const month = months[d.getMonth()];
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${day} ${month} ${hh}:${mm}`;
+    };
 
-        if (jenis === "income" || jenis === "pemasukan") {
-            dateMap[date].income += nominal;
-        } else if (jenis === "expense" || jenis === "pengeluaran") {
-            dateMap[date].expense += nominal;
-            
+    filteredTx.forEach(tx => {
+        labels.push(formatDateTime(tx.tanggal));
+        dataPoints.push(tx.balance);
+        pointColors.push(tx.isIncome ? '#2563EB' : '#DC2626');
+
+        if (!tx.isIncome) {
             const kat = tx.kategori || "Lainnya";
+            const nominal = Number(tx.nominal) || 0;
             categoryMap[kat] = (categoryMap[kat] || 0) + nominal;
         }
     });
 
-    const dates = Object.keys(dateMap);
-    const incomeData = dates.map(d => dateMap[d].income);
-    const expenseData = dates.map(d => dateMap[d].expense);
-
-    // 1. Grafik Trend (Line Chart Elegan)[cite: 7]
     const ctxTrend = document.getElementById("trendChart");
     if (ctxTrend) {
         if (trendChartInstance) trendChartInstance.destroy();
         const trendCtx = ctxTrend.getContext('2d');
 
-        const incomeGradient = trendCtx.createLinearGradient(0, 0, 0, 300);
-        incomeGradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
-        incomeGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-
-        const expenseGradient = trendCtx.createLinearGradient(0, 0, 0, 300);
-        expenseGradient.addColorStop(0, 'rgba(220, 38, 38, 0.2)');
-        expenseGradient.addColorStop(1, 'rgba(220, 38, 38, 0)');
-
         trendChartInstance = new Chart(trendCtx, {
             type: 'line',
             data: {
-                labels: dates.length > 0 ? dates : ['Belum ada data'],
-                datasets: [
-                    {
-                        label: 'Income',
-                        data: incomeData.length > 0 ? incomeData : [0],
-                        borderColor: '#2563EB',
-                        backgroundColor: incomeGradient,
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#2563EB'
-                    },
-                    {
-                        label: 'Expense',
-                        data: expenseData.length > 0 ? expenseData : [0],
-                        borderColor: '#DC2626',
-                        backgroundColor: expenseGradient,
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#DC2626'
+                labels: labels.length > 0 ? labels : ['Belum ada data'],
+                datasets: [{
+                    label: 'Total Saldo',
+                    data: dataPoints.length > 0 ? dataPoints : [0],
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: labels.length > 0 ? 5 : 0,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: pointColors.length > 0 ? pointColors : '#94A3B8',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    segment: {
+                        borderColor: ctx => {
+                            if (ctx.p0.parsed.y < ctx.p1.parsed.y) return '#2563EB';
+                            if (ctx.p0.parsed.y > ctx.p1.parsed.y) return '#DC2626';
+                            return '#94A3B8';
+                        }
                     }
-                ]
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { 
-                        position: 'top', 
-                        labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif" }, color: textColor } 
-                    },
-                    tooltip: { backgroundColor: tooltipBg, titleColor: tooltipText, bodyColor: tooltipText, padding: 12, cornerRadius: 10, displayColors: true }
+                    legend: { display: false },
+                    tooltip: { 
+                        backgroundColor: tooltipBg, 
+                        titleColor: tooltipText, 
+                        bodyColor: tooltipText, 
+                        padding: 12, 
+                        cornerRadius: 10, 
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Total Saldo: Rp' + context.parsed.y.toLocaleString('id-ID');
+                            }
+                        }
+                    }
                 },
                 scales: {
-                    x: { grid: { display: false }, border: { display: false }, ticks: { font: { family: "'Inter', sans-serif" }, color: textColor } },
-                    y: { grid: { color: gridColor, borderDash: [5, 5] }, border: { display: false }, ticks: { font: { family: "'Inter', sans-serif" }, color: textColor, padding: 10 } }
+                    x: { 
+                        grid: { display: false }, 
+                        border: { display: false }, 
+                        ticks: { font: { family: "'Inter', sans-serif" }, color: textColor, maxTicksLimit: 6 } 
+                    },
+                    y: { 
+                        grid: { color: gridColor, borderDash: [5, 5] }, 
+                        border: { display: false }, 
+                        ticks: { font: { family: "'Inter', sans-serif" }, color: textColor, padding: 10 } 
+                    }
                 }
             }
         });
     }
 
-    // 2. Grafik Kategori Pengeluaran (Doughnut Elegan)[cite: 7]
     const ctxCat = document.getElementById("categoryChart");
     if (ctxCat) {
         if (categoryChartInstance) categoryChartInstance.destroy();
@@ -748,7 +957,6 @@ function renderCharts(transactions, daysLimit = 7) {
     }
 }
 
-// E. Mengelola Dark / Light Mode via Settings (dan Update Chart Secara Otomatis)[cite: 7]
 function initTheme() {
     const lightRadio = document.getElementById("mode-light");
     const darkRadio = document.getElementById("mode-dark");
@@ -782,7 +990,6 @@ function initTheme() {
                     trendChartInstance.options.scales.x.ticks.color = textColor;
                     trendChartInstance.options.scales.y.ticks.color = textColor;
                     trendChartInstance.options.scales.y.grid.color = gridColor;
-                    trendChartInstance.options.plugins.legend.labels.color = textColor;
                     trendChartInstance.options.plugins.tooltip.backgroundColor = tooltipBg;
                     trendChartInstance.options.plugins.tooltip.titleColor = tooltipText;
                     trendChartInstance.options.plugins.tooltip.bodyColor = tooltipText;
@@ -801,9 +1008,6 @@ function initTheme() {
     });
 }
 
-// ==========================================
-// EFEK TAP / CLICK RIPPLE (ELEGANT UI)
-// ==========================================
 document.addEventListener("pointerdown", (e) => {
     const ripple = document.createElement("div");
     ripple.className = "click-ripple-effect";
@@ -818,11 +1022,6 @@ document.addEventListener("pointerdown", (e) => {
     });
 });
 
-// ==========================================================
-// FUNGSI CUSTOM UI (TOAST NOTIFICATION & CONFIRM DIALOG)
-// ==========================================================
-
-// 1. Pembuat Toast (Notifikasi Pop-up Kanan Atas/Tengah)
 function showToast(message, type = "success") {
     let container = document.getElementById("toast-container");
     
@@ -865,7 +1064,6 @@ function removeToast(toast) {
     });
 }
 
-// 2. Pembuat Custom Confirm Dialog (Ganti confirm bawaan)
 function showConfirmDialog(message) {
     return new Promise((resolve) => {
         const overlay = document.createElement("div");
